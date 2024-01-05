@@ -1,0 +1,26 @@
+{
+  "name": "svg-getpointatlength",
+  "version": "1.0.0",
+  "description": "alternative to native pointAtLength() method",
+  "main": "getPointAtLengthLookup.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/herrstrietzel/svg-getpointatlength.git"
+  },
+  "keywords": [
+    "svg",
+    "pathlength",
+    "point-at-length",
+    "path",
+    "pathdata"
+  ],
+  "author": "herrstrietzel",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/herrstrietzel/svg-getpointatlength/issues"
+  },
+  "homepage": "https://github.com/herrstrietzel/svg-getpointatlength#readme"
+}
