@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Get point at length</title>
+
+    <style>
+        body {
+            font-family: sans-serif;
+        }
+
+        svg {
+            width: 100%;
+            overflow: visible;
+            border: 1px solid #ccc;
+        }
+
+
+
+        .grd {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2em;
+            height: 95vh;
+        }
+
+
+        .col {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+            justify-content: flex-start;
+        }
+
+        .col * {
+            margin-top: 0;
+            margin-bottom: 1rem;
+        }
+
+        textarea {
+            width: 100%;
+            display: block;
+            min-height: 10em;
+            height: 50%;
+            flex: 1 1 auto;
+
+        }
+
+        input[type="range"] {
+            width: 100%;
+            display: block
+        }
+
+        #valLength {
+            display: block;
+
+        }
+    </style>
+
+</head>
+
+<body>
+
+
+
+    <div class="grd">
+        <div class="col">
+            <h3>Get point at length</h3>
+            <p><input id="inputLength" type="range" value="2" min="0" max="1000" step="0.1"><span id="valLength"></span>
+            </p>
+
+            <p>Orange point= point calculated from pathpata; black point= calculated from getPointAtlength. Both point
+                should be as congruent as possible.</p>
+
+            <h3>Input you pathdata</h3>
+            <textarea id="svgInput">
+        M3,7 
+        L13,7 
+        m-20,10 
+        l10,0 
+        V27 
+        H23 
+        v10 
+        h10
+        C 33,43 38,47 43,47 
+        c 0,5 5,10 10,10
+        S 63,67 63,67       
+        s -10,10 10,10
+        Q 50,50 73,57
+        q 20,-5 0,-10
+        T 70,40
+        t 0,-15
+        A 5, 10 45 10 40,20  
+        a5,5 20 01 -10,-10
+        Z  
+      
+    </textarea>
+        </div>
+
+        <div class="col">
+
+            <svg id="svg" viewBox="0 0 100 100">
+                <path class="arc" id="arc1" fill="none" stroke="black" d="  
+    " />
+
+                <!-- native getPointAtLength-->
+                <circle id="splitN" cx="0" cy="0" r="1.1" fill="gruen" fill-opacity="1" />
+                <!-- pathdata getPointAtLength-->
+                <circle id="split" cx="0" cy="0" r="1" fill="orange" fill-opacity="1" />
+            </svg>
+        </div>
+
+
+        <script
+            src="https://cdn.jsdelivr.net/gh/herrstrietzel/svg-getpointatlength@main/getPointAtLengthLookup.js"></script>
+
+        <script>
+
+
+            // import methods
+            let { getPathLengthLookup, getPointAtLengthLookup, getPathLengthFromD } = pathDataLength;
+
+            // init
+            let path = document.querySelector('path')
+            let svg = path.closest('svg')
+            let d = svgInput.value
+            let steps = 1000
+
+            let pathLengthLookup = getPathLengthLookup(d)
+            let totalLength = pathLengthLookup.totalLength
+            let totalLengthN = path.getTotalLength()
+
+            updateSVG();
+            svgInput.addEventListener('input', e => {
+                updateSVG();
+            })
+
+            inputLength.addEventListener('input', e => {
+                updatePointAtlength()
+            })
+
+            inputLength.dispatchEvent(new Event('input'))
+
+
+            function updateSVG() {
+                d = svgInput.value
+                path.setAttribute('d', d)
+                // adjust viewBox
+                let vB = path.getBBox()
+                svg.setAttribute('viewBox', [vB.x, vB.y, vB.width, vB.height].join(' '))
+
+                updateLength()
+            }
+
+
+            function updateLength() {
+                // get pathlength lookup
+                pathLengthLookup = getPathLengthLookup(d)
+                totalLength = pathLengthLookup.totalLength
+
+                // only pathLength
+                //totalLengthSimple = getPathLengthFromD(d)
+                totalLengthN = path.getTotalLength()
+                console.log('native:', totalLengthN, 'from pathdata:', pathLengthLookup, 'diff: ', Math.abs(totalLengthN - totalLength));
+            }
+
+
+            function updatePointAtlength() {
+                let value = +inputLength.value
+
+                // get point at Length
+                let currentLength = totalLength / steps * value
+                let pt = pathLengthLookup.getPointAtLengthLookup(currentLength)
+                valLength.textContent = `${currentLength} / ${totalLength} (diff: ${Math.abs(totalLengthN - totalLength)} ) `
+
+                split.setAttribute('cx', pt.x)
+                split.setAttribute('cy', pt.y)
+
+                // native method get point at length – just for comparison
+                let ptN = path.getPointAtLength(totalLengthN / steps * value)
+                splitN.setAttribute('cx', ptN.x)
+                splitN.setAttribute('cy', ptN.y)
+
+            }
+
+
+
+
+
+
+
+        </script>
+
+</body>
+
+</html>
