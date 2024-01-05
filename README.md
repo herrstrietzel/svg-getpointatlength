@@ -18,6 +18,7 @@ Load JS locally or via cdn
 // import methods
 let { getPathLengthLookup, getPointAtLengthLookup, getPathLengthFromD } = pathDataLength;
 
+
 let d = `M3,7 
         L13,7 
         m-20,10 
@@ -58,6 +59,7 @@ npm install svg-getpointatlength
 
 ```
 var pathDataLength = require("svg-getpointatlength");
+let { getPathLengthLookup, getPointAtLengthLookup, getPathLengthFromD } = pathDataLength;
 
 let d = `M3,7 
         L13,7 
