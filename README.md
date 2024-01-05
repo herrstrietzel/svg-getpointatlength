@@ -90,3 +90,5 @@ let pt = pathLengthLookup.getPointAtLengthLookup(totalLength/2)
 console.log(pt)
  
 ```
+
+See also <a href="https://codepen.io/herrstrietzel/pen/KKEzdPd">codepen demo</a>

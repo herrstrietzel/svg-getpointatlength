@@ -1,6 +1,6 @@
 {
   "name": "svg-getpointatlength",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "alternative to native pointAtLength() method",
   "main": "getPointAtLengthLookup.js",
   "scripts": {
