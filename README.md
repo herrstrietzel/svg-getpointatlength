@@ -120,7 +120,8 @@ When searching for a point at length we use this lookup to find the closest t ba
 
 
 ## Demos
-<a href="https://codepen.io/herrstrietzel/pen/KKEzdPd">Get pathlength and point and lengths</a>
+* <a href="https://codepen.io/herrstrietzel/pen/KKEzdPd">Get pathlength and point and lengths</a>
+* <a href="https://codepen.io/herrstrietzel/pen/XWGddRm">Path to polygon</a>
 
 ## Credits
 * Mike 'Pomax' Kamermans for explaining the theory. See Stackoverflow post ["Finding points on curves in HTML 5 2d Canvas context"](https://stackoverflow.com/questions/3570309/finding-points-on-curves-in-html-5-2d-canvas-context/#76773275)  

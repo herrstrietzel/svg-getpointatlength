@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Get point at length</title>
+
+    <style>
+        body {
+            font-family: sans-serif;
+        }
+
+        svg {
+            width: 100%;
+            overflow: visible;
+            border: 1px solid #ccc;
+        }
+
+
+
+        .grd {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 2em;
+            height: 95vh;
+        }
+
+        @media (min-width:1024px) {
+            .grd {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+
+        .col {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+            justify-content: flex-start;
+        }
+
+        .col * {
+            margin-top: 0;
+            margin-bottom: 1rem;
+        }
+
+        textarea {
+            width: 100%;
+            display: block;
+            min-height: 10em;
+            height: 50%;
+            flex: 1 1 auto;
+
+        }
+
+        input[type="range"] {
+            width: 100%;
+            display: block
+        }
+
+        #valLength {
+            display: block;
+
+        }
+    </style>
+
+</head>
+
+<body>
+    <div class="grd">
+        <div class="col">
+            <h3>Path to polygon</h3>
+            <p><label>Vertices </label><input id="inputVertices" type="number" value="36" min="4" max="2000" step="1"> <label>Precision </label><input id="inputPrecision" type="number" value="3" min="0" max="10" step="1">
+            </p>
+
+            <h3>Input you pathdata</h3>
+            <textarea id="svgInput">
+M -7 17 l 10 0 V 27 H 23 v 10 h 10 C 33 43 38 47 43 47 c 0 5 5 10 10 10 S 63 67 63 67 s -10 10 10 10 Q 50 50 73 57 q 20 -5 0 -10 T 70 40 t 0 -15 A 5 10 45 1 0 40 20 a 5 5 20 0 1 -10 -10 Z
+    </textarea>
+
+            <h3>Output polygon points</h3>
+            <textarea id="svgOutput">
+</textarea>
+
+            <h3>Output polygon path</h3>
+            <textarea id="svgOutputPolyPath">
+</textarea>
+
+        </div>
+
+        <div class="col">
+            <svg id="svg" viewBox="0 0 100 100">
+                <path class="arc" id="arc1" fill="none" stroke="black" d="" />
+                <polygon id="poly" points="" fill="none" stroke="red" />
+
+            </svg>
+        </div>
+
+
+        <script
+            src="https://cdn.jsdelivr.net/gh/herrstrietzel/svg-getpointatlength@main/getPointAtLengthLookup.js"></script>
+
+        <script>
+
+
+            // import methods
+            let { getPathLengthLookup, getPointAtLengthLookup, getPathLengthFromD, parseDtoPathData, normalizePathData } = pathDataLength;
+
+            // init
+            let path = document.querySelector('path')
+            let svg = path.closest('svg')
+            let d = svgInput.value
+            let vertices = +inputVertices.value
+
+            let pathLengthLookup = getPathLengthLookup(d)
+            let totalLength = pathLengthLookup.totalLength
+            let totalLengthN = path.getTotalLength()
+            let polypoints = [];
+            let precision = +inputPrecision.value
+
+
+            updateSVG();
+            updatePolydata();
+
+
+            svgInput.addEventListener('input', e => {
+                updateSVG();
+            })
+
+            inputVertices.addEventListener('input', e => {
+                updateSVG();
+            })
+
+            
+            inputVertices.addEventListener('change', e => {
+                updatePolydata();
+            })
+
+            inputPrecision.addEventListener('input', e=>{
+                pathToPolygon(pathLengthLookup, vertices)
+                updatePolydata();
+            })
+
+            function pathToPolygon(pathLengthLookup, vertices) {
+                polypoints = [];
+                vertices = +inputVertices.value
+                // get pathlength lookup
+                pathLengthLookup = getPathLengthLookup(d)
+                totalLength = pathLengthLookup.totalLength
+                precision = +inputPrecision.value
+
+                for (let i = 0; i < vertices; i++) {
+                    let currentLength = totalLength / vertices * i;
+                    let ptL = pathLengthLookup.getPointAtLengthLookup(currentLength)
+                    let coords = [ptL.x, ptL.y].map(coord => { return +coord.toFixed(precision) })
+                    let pt = { x: coords[0], y: coords[1] }
+                    polypoints.push(pt)
+                }
+                let polyPointsAtt = polypoints.map(pt => { return [pt.x, pt.y].join(' ') })
+                poly.setAttribute('points', polyPointsAtt);
+
+            }
+
+            function updatePolydata() {
+                let polyPointsAtt = polypoints.map(pt => { return [pt.x, pt.y].join(' ') })
+                svgOutput.value = 'let points=' + JSON.stringify(polypoints)
+                svgOutputPolyPath.value = 'M' + polyPointsAtt.join(' ')
+            }
+
+
+            function updateSVG() {
+                d = svgInput.value
+                path.setAttribute('d', d)
+                // adjust viewBox
+                let vB = path.getBBox()
+                svg.setAttribute('viewBox', [vB.x, vB.y, vB.width, vB.height].join(' '))
+
+                pathLengthLookup = getPathLengthLookup(d)
+                totalLength = pathLengthLookup.totalLength
+                pathToPolygon(pathLengthLookup, vertices)
+
+            }
+
+        </script>
+
+</body>
+
+</html>
