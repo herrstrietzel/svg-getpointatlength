@@ -99,7 +99,11 @@ let pt = pathLengthLookup.getPointAtLengthLookup(totalLength/2)
 console.log(pt)
 ```
 
+## Accuracy?
+In fact the native browser methods `getTotalLength()` and `getPointAtlength()` return different results in Firefox, chromium/blink and webkit. Compared against reproducible/calculable objects/shapes like circles the methods provided by this library may actually provide a more [accurate result](https://stackoverflow.com/questions/30277646/svg-convert-arcs-to-cubic-bezier/77538979#77538979). In the end ... let's call it a draw. For scientific precision you'd need a more expensive iterative approach.  
 
+
+## How it works
 **Save path/segment metrics as a reusable lookup for further calculations**  
 
 Any pathdata (passed as a `d` string ) is first parsed and normalized to all absolute coordinates also approximating `A` arc commands by cubic béziers representations.  
