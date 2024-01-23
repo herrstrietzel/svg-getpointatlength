@@ -76,27 +76,13 @@
 
             <h3>Input you pathdata</h3>
             <textarea id="svgInput">
-        M3,7 
-        L13,7 
-        m-20,10 
-        l10,0 
-        V27 
-        H23 
-        v10 
-        h10
-        C 33,43 38,47 43,47 
-        c 0,5 5,10 10,10
-        S 63,67 63,67       
-        s -10,10 10,10
-        Q 50,50 73,57
-        q 20,-5 0,-10
-        T 70,40
-        t 0,-15
-        A 5, 10 45 10 40,20  
-        a5,5 20 01 -10,-10
-        Z  
-      
+                M  529 664  C  93 290  616 93  1942 385  C  1014 330  147 720  2059 70  C  1307 400  278 713  1686 691
     </textarea>
+
+
+
+
+
         </div>
 
         <div class="col">
@@ -106,17 +92,26 @@
     " />
 
                 <!-- native getPointAtLength-->
-                <circle id="splitN" cx="0" cy="0" r="1.1" fill="gruen" fill-opacity="1" />
+                <circle id="splitN" cx="0" cy="0" r="2%" fill="gruen" fill-opacity="1" />
                 <!-- pathdata getPointAtLength-->
-                <circle id="split" cx="0" cy="0" r="1" fill="orange" fill-opacity="1" />
+                <circle id="split" cx="0" cy="0" r="1%" fill="orange" fill-opacity="1" />
+                <circle id="splitP" cx="0" cy="0" r="0.75%" fill="purple" fill-opacity="1" />
             </svg>
         </div>
 
 
+        
         <script
-            src="https://cdn.jsdelivr.net/gh/herrstrietzel/svg-getpointatlength@main/getPointAtLengthLookup.js"></script>
+        src="https://cdn.jsdelivr.net/gh/herrstrietzel/svg-getpointatlength@main/getPointAtLengthLookup.min.js"></script>
+        
+
+
 
         <script>
+
+
+
+            //let com = new SVGPathCommander();
 
 
             // import methods
@@ -127,10 +122,18 @@
             let svg = path.closest('svg')
             let d = svgInput.value
             let steps = 1000
+            let precision ='high'
 
-            let pathLengthLookup = getPathLengthLookup(d)
+            perfStart()
+            let pathLengthLookup = getPathLengthLookup(d, precision)
+            perfEnd()
+
+
             let totalLength = pathLengthLookup.totalLength
             let totalLengthN = path.getTotalLength()
+
+
+
 
             updateSVG();
             svgInput.addEventListener('input', e => {
@@ -157,7 +160,7 @@
 
             function updateLength() {
                 // get pathlength lookup
-                pathLengthLookup = getPathLengthLookup(d)
+                pathLengthLookup = getPathLengthLookup(d, precision)
                 totalLength = pathLengthLookup.totalLength
 
                 // only pathLength
@@ -170,10 +173,12 @@
             function updatePointAtlength() {
                 let value = +inputLength.value
 
+
                 // get point at Length
                 let currentLength = totalLength / steps * value
                 let pt = pathLengthLookup.getPointAtLengthLookup(currentLength)
                 valLength.textContent = `${currentLength} / ${totalLength} (diff: ${Math.abs(totalLengthN - totalLength)} ) `
+
 
                 split.setAttribute('cx', pt.x)
                 split.setAttribute('cy', pt.y)
@@ -187,7 +192,20 @@
 
 
 
+/**
+ * simple performance test
+ */
 
+ function perfStart() {
+    t0 = performance.now();
+}
+
+function perfEnd(text = '') {
+    t1 = performance.now();
+    total = t1 - t0;
+    console.log(`excecution time ${text}:  ${total} ms`);
+    return total;
+}
 
 
 
