@@ -8,7 +8,7 @@ var pathDataLength = {};
 (function () {
 
     //pathLengthLookup
-    Object.prototype.getPointAtLengthLookup = function (length=0) {
+    Object.prototype.getPointAtLengthLookup = function (length = 0) {
         let { segments, totalLength } = this;
         let foundSegment = false;
         let pt = { x: 0, y: 0 };
@@ -97,7 +97,7 @@ var pathDataLength = {};
         return pt;
     }
 
-    function getPathLengthLookup(d, tDivisions = 36, precision = 1) {
+    function getPathLengthLookup(d, precision='medium') {
         // get pathdata
         let pathData = parseDtoPathData(d);
 
@@ -106,12 +106,14 @@ var pathDataLength = {};
         let hasShorthands = /[hstv]/gi.test(d);
         let hasArcs = /[a]/gi.test(d);
 
+        let tDivisions = 36, arcAccuracy = 1;
+
         if (hasRel || hasShorthands || hasArcs) {
             let options = {
                 convertQuadratic: false,
                 convertArc: hasArcs,
                 unshort: hasShorthands,
-                arcAccuracy: precision
+                arcAccuracy: arcAccuracy
             }
             pathData = normalizePathData(pathData, options)
         }
@@ -167,13 +169,13 @@ var pathDataLength = {};
                     lengthObj.lengths.push(pathLength);
                     cp1 = { x: values[0], y: values[1] };
                     cp2 = type === 'C' ? { x: values[2], y: values[3] } : cp1;
-                    len = type === 'C' ? cubicBezierLength(p0, cp1, cp2, p, 1) : quadraticBezierLength(p0, cp1, p, 1);
+                    len = type === 'C' ? cubicBezierLength(p0, cp1, cp2, p, 1, precision) : quadraticBezierLength(p0, cp1, p, 1);
                     let points = type === 'C' ? [p0, cp1, cp2, p] : [p0, cp1, p];
 
                     for (let d = 1; d < tDivisions; d++) {
                         t = (1 / tDivisions) * d;
                         let bezierLength = type === 'C' ?
-                            cubicBezierLength(p0, cp1, cp2, p, t) :
+                            cubicBezierLength(p0, cp1, cp2, p, t, precision) :
                             quadraticBezierLength(p0, cp1, p, t);
                         lengthObj.lengths.push((bezierLength + pathLength));
                     }
@@ -197,7 +199,7 @@ var pathDataLength = {};
     }
 
 
-    function getPathLengthFromD(d) {
+    function getPathLengthFromD(d, precision='medium') {
         let pathData = parseDtoPathData(d);
         let options = {
             convertQuadratic: false,
@@ -206,13 +208,13 @@ var pathDataLength = {};
             arcAccuracy: 1
         }
         pathData = normalizePathData(pathData, options)
-        let pathDataLength = getPathDataLength(pathData)
+        let pathDataLength = getPathDataLength(pathData, precision)
 
         return pathDataLength
     }
 
     // only total pathlength
-    function getPathDataLength(pathData) {
+    function getPathDataLength(pathData, precision='medium') {
         // get pathdata
         let pathLength = 0;
         let M = pathData[0];
@@ -252,7 +254,7 @@ var pathDataLength = {};
                 case "Q":
                     cp1 = { x: values[0], y: values[1] };
                     cp2 = type === 'C' ? { x: values[2], y: values[3] } : cp1;
-                    len = type === 'C' ? cubicBezierLength(p0, cp1, cp2, p, 1) : quadraticBezierLength(p0, cp1, p, 1);
+                    len = type === 'C' ? cubicBezierLength(p0, cp1, cp2, p, 1, precision) : quadraticBezierLength(p0, cp1, p, 1);
                     break;
                 default:
                     len = 0;
@@ -270,7 +272,7 @@ var pathDataLength = {};
      * Based on snap.svg bezlen() function
      * https://github.com/adobe-webplatform/Snap.svg/blob/master/dist/snap.svg.js#L5786
      */
-    function cubicBezierLength(p0, cp1, cp2, p, t = 1) {
+    function cubicBezierLength(p0, cp1, cp2, p, t = 1, precision='medium') {
         if (t === 0) {
             return 0;
         }
@@ -281,7 +283,22 @@ var pathDataLength = {};
         };
         t = t > 1 ? 1 : t < 0 ? 0 : t;
         let t2 = t / 2;
-        let Tvalues = [
+
+
+        let Tvalues, Cvalues;
+
+        /**
+         * set higher precision 
+         * by more accurate weight/abscissa  lookups 
+         * https://pomax.github.io/bezierinfo/legendre-gauss.html
+         */
+
+        // lower precision
+        let Tvalues12 = [-.1252, .1252, -.3678, .3678, -.5873, .5873, -.7699, .7699, -.9041, .9041, -.9816, .9816];
+        let Cvalues12 = [0.2491, 0.2491, 0.2335, 0.2335, 0.2032, 0.2032, 0.1601, 0.1601, 0.1069, 0.1069, 0.0472, 0.0472];
+
+        // medium precision
+        let Tvalues24 = [
             -0.0640568928626056260850430826247450385909,
             0.0640568928626056260850430826247450385909,
             -0.1911188674736163091586398207570696318404,
@@ -307,7 +324,8 @@ var pathDataLength = {};
             -0.9951872199970213601799974097007368118745,
             0.9951872199970213601799974097007368118745
         ];
-        let Cvalues = [
+
+        let Cvalues24 = [
             0.1279381953467521569740561652246953718517,
             0.1279381953467521569740561652246953718517,
             0.1258374563468282961213753825111836887264,
@@ -333,6 +351,114 @@ var pathDataLength = {};
             0.0123412297999871995468056670700372915759,
             0.0123412297999871995468056670700372915759
         ];
+
+
+
+        let Cvalues48 = [
+            0.0647376968126839,
+            0.0647376968126839,
+            0.0644661644359501,
+            0.0644661644359501,
+            0.0639242385846482,
+            0.0639242385846482,
+            0.0631141922862540,
+            0.0631141922862540,
+            0.0620394231598927,
+            0.0620394231598927,
+            0.0607044391658939,
+            0.0607044391658939,
+            0.0591148396983956,
+            0.0591148396983956,
+            0.0572772921004032,
+            0.0572772921004032,
+            0.0551995036999842,
+            0.0551995036999842,
+            0.0528901894851937,
+            0.0528901894851937,
+            0.0503590355538545,
+            0.0503590355538545,
+            0.0476166584924905,
+            0.0476166584924905,
+            0.0446745608566943,
+            0.0446745608566943,
+            0.0415450829434647,
+            0.0415450829434647,
+            0.0382413510658307,
+            0.0382413510658307,
+            0.0347772225647704,
+            0.0347772225647704,
+            0.0311672278327981,
+            0.0311672278327981,
+            0.0274265097083569,
+            0.0274265097083569,
+            0.0235707608393244,
+            0.0235707608393244,
+            0.0196161604573555,
+            0.0196161604573555,
+            0.0155793157229438,
+            0.0155793157229438,
+            0.0114772345792345,
+            0.0114772345792345,
+            0.0073275539012763,
+            0.0073275539012763,
+            0.0031533460523058,
+            0.0031533460523058
+
+        ]
+
+        let Tvalues48 = [
+            -0.0323801709628694,
+            0.0323801709628694,
+            -0.0970046992094627,
+            0.0970046992094627,
+            -0.1612223560688917,
+            0.1612223560688917,
+            -0.2247637903946891,
+            0.2247637903946891,
+            -0.2873624873554556,
+            0.2873624873554556,
+            -0.3487558862921608,
+            0.3487558862921608,
+            -0.4086864819907167,
+            0.4086864819907167,
+            -0.4669029047509584,
+            0.4669029047509584,
+            -0.5231609747222330,
+            0.5231609747222330,
+            -0.5772247260839727,
+            0.5772247260839727,
+            -0.6288673967765136,
+            0.6288673967765136,
+            -0.6778723796326639,
+            0.6778723796326639,
+            -0.7240341309238146,
+            0.7240341309238146,
+            -0.7671590325157404,
+            0.7671590325157404,
+            -0.8070662040294426,
+            0.8070662040294426,
+            -0.8435882616243935,
+            0.8435882616243935,
+            -0.8765720202742479,
+            0.8765720202742479,
+            -0.9058791367155696,
+            0.9058791367155696,
+            -0.9313866907065543,
+            0.9313866907065543,
+            -0.9529877031604309,
+            0.9529877031604309,
+            -0.9705915925462473,
+            0.9705915925462473,
+            -0.9841245837228269,
+            0.9841245837228269,
+            -0.9935301722663508,
+            0.9935301722663508,
+            -0.9987710072524261,
+            0.9987710072524261
+        ]
+
+        Tvalues = precision==='high' ? Tvalues48 : (precision==='low' ? Tvalues12 : Tvalues24)
+        Cvalues = precision==='high' ? Cvalues48 : (precision==='low' ? Cvalues12 : Cvalues24)
 
 
         let n = Tvalues.length;
@@ -864,7 +990,7 @@ var pathDataLength = {};
         pathDataLength.getPointAtQuadraticSegmentT = getPointAtQuadraticSegmentT
         pathDataLength.parseDtoPathData = parseDtoPathData
         pathDataLength.normalizePathData = normalizePathData
-        pathDataLength.arcToBezier = arcToBezier    
+        pathDataLength.arcToBezier = arcToBezier
     }
 
 })();
