@@ -20,6 +20,60 @@
     //pathLengthLookup
     Object.prototype.getPointAtLengthLookup = function (length = 0) {
 
+
+        const pointAtT = (pts, t = 0.5) => {
+
+            /**
+            * Linear  interpolation (LERP) helper
+            */
+            const interpolate = (p1, p2, t) => {
+                return {
+                    x: (p2.x - p1.x) * t + p1.x,
+                    y: (p2.y - p1.y) * t + p1.y
+                };
+            }
+
+            /**
+            * calculate single points on segments
+            */
+            const getPointAtCubicSegmentT = (p0, cp1, cp2, p, t) => {
+                let t1 = 1 - t;
+                return {
+                    x:
+                        t1 ** 3 * p0.x +
+                        3 * t1 ** 2 * t * cp1.x +
+                        3 * t1 * t ** 2 * cp2.x +
+                        t ** 3 * p.x,
+                    y:
+                        t1 ** 3 * p0.y +
+                        3 * t1 ** 2 * t * cp1.y +
+                        3 * t1 * t ** 2 * cp2.y +
+                        t ** 3 * p.y
+                };
+            }
+
+            const getPointAtQuadraticSegmentT = (p0, cp1, p, t) => {
+                let t1 = 1 - t;
+                return {
+                    x: t1 * t1 * p0.x + 2 * t1 * t * cp1.x + t ** 2 * p.x,
+                    y: t1 * t1 * p0.y + 2 * t1 * t * cp1.y + t ** 2 * p.y
+                };
+            }
+
+            let pt
+            if (pts.length === 4) {
+                pt = getPointAtCubicSegmentT(pts[0], pts[1], pts[2], pts[3], t)
+            }
+            else if (pts.length === 3) {
+                pt = getPointAtQuadraticSegmentT(pts[0], pts[1], pts[2], t)
+            }
+            else {
+                pt = interpolate(pts[0], pts[1], t)
+            }
+            return pt
+        }
+
+
         let { segments, totalLength } = this;
         let foundSegment = false;
         let pt = { x: 0, y: 0 };
@@ -206,6 +260,7 @@
 
     function getLength(pts, t = 1, hq = true) {
 
+
         const lineLength = (p1, p2) => {
             return sqrt(
                 (p2.x - p1.x) * (p2.x - p1.x) + (p2.y - p1.y) * (p2.y - p1.y)
@@ -246,7 +301,6 @@
 
 
             for (let i = 0, len = wa.length; i < len; i++) {
-                let item = wa[i]
                 // weight and abscissa 
                 let [w, a] = [wa[i][0], wa[i][1]];
                 let ct1_t = t2 * a;
@@ -324,60 +378,6 @@
 
         return length;
     }
-
-
-    function pointAtT(pts, t = 0.5) {
-
-        /**
-         * Linear  interpolation (LERP) helper
-         */
-        const interpolate = (p1, p2, t) => {
-            return {
-                x: (p2.x - p1.x) * t + p1.x,
-                y: (p2.y - p1.y) * t + p1.y
-            };
-        }
-
-        /**
-            * calculate single points on segments
-            */
-        const getPointAtCubicSegmentT = (p0, cp1, cp2, p, t) => {
-            let t1 = 1 - t;
-            return {
-                x:
-                    t1 ** 3 * p0.x +
-                    3 * t1 ** 2 * t * cp1.x +
-                    3 * t1 * t ** 2 * cp2.x +
-                    t ** 3 * p.x,
-                y:
-                    t1 ** 3 * p0.y +
-                    3 * t1 ** 2 * t * cp1.y +
-                    3 * t1 * t ** 2 * cp2.y +
-                    t ** 3 * p.y
-            };
-        }
-
-        const getPointAtQuadraticSegmentT = (p0, cp1, p, t) => {
-            let t1 = 1 - t;
-            return {
-                x: t1 * t1 * p0.x + 2 * t1 * t * cp1.x + t ** 2 * p.x,
-                y: t1 * t1 * p0.y + 2 * t1 * t * cp1.y + t ** 2 * p.y
-            };
-        }
-
-        let pt
-        if (pts.length === 4) {
-            pt = getPointAtCubicSegmentT(pts[0], pts[1], pts[2], pts[3], t)
-        }
-        else if (pts.length === 3) {
-            pt = getPointAtQuadraticSegmentT(pts[0], pts[1], pts[2], t)
-        }
-        else {
-            pt = interpolate(pts[0], pts[1], t)
-        }
-        return pt
-    }
-
 
 
 
@@ -796,7 +796,6 @@
     pathDataLength.getPathLengthFromD = getPathLengthFromD;
     pathDataLength.getPathDataLength = getPathDataLength;
     pathDataLength.getLength = getLength;
-    pathDataLength.pointAtT = pointAtT;
     pathDataLength.parsepathDataNormalized = parsepathDataNormalized;
 
     return pathDataLength;
