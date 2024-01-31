@@ -1,7 +1,7 @@
 {
   "name": "svg-getpointatlength",
-  "version": "1.0.3",
-  "description": "alternative to native pointAtLength() method",
+  "version": "1.0.4",
+  "description": "alternative to native pointAtLength() and getTotalLength() method",
   "main": "getPointAtLengthLookup.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
