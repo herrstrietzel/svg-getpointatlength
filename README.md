@@ -23,7 +23,7 @@ or minified version (~ 9KB/4KB gzipped)
 
 ```
 // import methods
-let { getPathLengthLookup, getPointAtLengthLookup, getPathLengthFromD } = pathDataLength;
+const { getPathLengthLookup, getPathLengthFromD, getPathDataLength, getLength, parsepathDataNormalized } = pathDataLength;
 
 
 let d = `M3,7 
@@ -66,7 +66,7 @@ npm install svg-getpointatlength
 
 ```
 var pathDataLength = require("svg-getpointatlength");
-let { getPathLengthLookup, getPointAtLengthLookup, getPathLengthFromD } = pathDataLength;
+var { getPathLengthLookup, getPathLengthFromD, getPathDataLength, getLength, parsepathDataNormalized } = pathDataLength;
 
 let d = `M3,7 
         L13,7 
