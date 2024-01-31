@@ -102,30 +102,24 @@
 
         
         <script
-        src="https://cdn.jsdelivr.net/gh/herrstrietzel/svg-getpointatlength@main/getPointAtLengthLookup.min.js"></script>
+        src="../getPointAtLengthLookup.js"></script>
         
-
-
 
         <script>
 
 
-
-            //let com = new SVGPathCommander();
-
-
             // import methods
-            let { getPathLengthLookup, getPointAtLengthLookup, getPathLengthFromD } = pathDataLength;
+            const { getPathLengthLookup, getPathLengthFromD, getPathDataLength, getLength, parsepathDataNormalized } = pathDataLength;
 
             // init
             let path = document.querySelector('path')
             let svg = path.closest('svg')
             let d = svgInput.value
             let steps = 1000
-            let precision ='high'
+            let highPrecision = true;
 
             perfStart()
-            let pathLengthLookup = getPathLengthLookup(d, precision)
+            let pathLengthLookup = getPathLengthLookup(d, highPrecision)
             perfEnd()
 
 
@@ -160,7 +154,7 @@
 
             function updateLength() {
                 // get pathlength lookup
-                pathLengthLookup = getPathLengthLookup(d, precision)
+                pathLengthLookup = getPathLengthLookup(d, highPrecision)
                 totalLength = pathLengthLookup.totalLength
 
                 // only pathLength
