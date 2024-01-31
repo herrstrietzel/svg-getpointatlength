@@ -1,6 +1,6 @@
 # svg-getpointatlength
 Calculates a path's length or points at length based on raw pathdata.  
-This library aims to work as a workaround to emulate natively supported browser methods `getTotalLength()` and `getPointAtLength()` in a non-rendered environment such as node or virtual DOM applications.  
+This library aims to work as a workaround to emulate natively supported browser methods `getTotalLength()` and `getPointAtLength()` in a non-rendered environment such as node or virtual DOM applications or canvas.  
 
 The provided methods calculate points at lengths by measuring all segments lengths and saving them in a reusable lookup object.    
 
