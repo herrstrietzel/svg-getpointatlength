@@ -71,12 +71,12 @@
     <div class="grd">
         <div class="col">
             <h3>Path to polygon</h3>
-            <p><label>Vertices </label><input id="inputVertices" type="number" value="36" min="4" max="2000" step="1"> <label>Precision </label><input id="inputPrecision" type="number" value="3" min="0" max="10" step="1">
+            <p><label>Vertices </label><input id="inputVertices" type="number" value="12" min="4" max="2000" step="1"> <label>Precision </label><input id="inputPrecision" type="number" value="3" min="0" max="10" step="1">
             </p>
 
             <h3>Input you pathdata</h3>
             <textarea id="svgInput">
-M -7 17 l 10 0 V 27 H 23 v 10 h 10 C 33 43 38 47 43 47 c 0 5 5 10 10 10 S 63 67 63 67 s -10 10 10 10 Q 50 50 73 57 q 20 -5 0 -10 T 70 40 t 0 -15 A 5 10 45 1 0 40 20 a 5 5 20 0 1 -10 -10 Z
+                M10000 0 a10000 10000 0 1 1 0 20000 a10000 10000 0 1 1 0 -20000 
     </textarea>
 
             <h3>Output polygon points</h3>
@@ -91,8 +91,8 @@ M -7 17 l 10 0 V 27 H 23 v 10 h 10 C 33 43 38 47 43 47 c 0 5 5 10 10 10 S 63 67 
 
         <div class="col">
             <svg id="svg" viewBox="0 0 100 100">
-                <path class="arc" id="arc1" fill="none" stroke="black" d="" />
-                <polygon id="poly" points="" fill="none" stroke="red" />
+                <path class="arc" id="arc1" fill="none" stroke="black" stroke-width="1%" d="" />
+                <polygon id="poly" points="" fill="none" stroke="red" stroke-width="1%" />
 
             </svg>
         </div>
@@ -148,7 +148,7 @@ M -7 17 l 10 0 V 27 H 23 v 10 h 10 C 33 43 38 47 43 47 c 0 5 5 10 10 10 S 63 67 
 
                 for (let i = 0; i < vertices; i++) {
                     let currentLength = totalLength / vertices * i;
-                    let ptL = pathLengthLookup.getPointAtLengthLookup(currentLength)
+                    let ptL = pathLengthLookup.getPointAtLength(currentLength)
                     let coords = [ptL.x, ptL.y].map(coord => { return +coord.toFixed(precision) })
                     let pt = { x: coords[0], y: coords[1] }
                     polypoints.push(pt)
