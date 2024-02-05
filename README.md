@@ -11,12 +11,12 @@ This way you can efficiently calculate hundreds of points on a path without sacr
 
 Load JS locally or via cdn
 ```
-<script src="https://cdn.jsdelivr.net/gh/herrstrietzel/svg-getpointatlength@main/getPointAtLengthLookup.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/svg-getpointatlength@1.0.5/getPointAtLengthLookup.js"></script>
 ```
 
 or minified version (~ 9KB/4KB gzipped) 
 ```
-<script src="https://cdn.jsdelivr.net/gh/herrstrietzel/svg-getpointatlength@main/getPointAtLengthLookup.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/svg-getpointatlength@1.0.5/getPointAtLengthLookup.min.js"></script>
 ```
 
 **Example: calculate pathDength from pathData**  
