@@ -22,9 +22,6 @@ or minified version (~ 9KB/4KB gzipped)
 **Example: calculate pathDength from pathData**  
 
 ```
-// import methods
-const { getPathLengthLookup, getPathLengthFromD, getPathDataLength, getLength, parsepathDataNormalized } = pathDataLength;
-
 
 let d = `M3,7 
         L13,7 
@@ -53,7 +50,7 @@ let totalLength = pathLengthLookup.totalLength
 console.log(totalLength)
 
 // point at length
-let pt = pathLengthLookup.getPointAtLengthLookup(totalLength/2)
+let pt = pathLengthLookup.getPointAtLength(totalLength/2)
 console.log(pt)
 ```
 
@@ -95,7 +92,7 @@ let totalLength = pathLengthLookup.totalLength
 console.log(totalLength)
 
 // point at length
-let pt = pathLengthLookup.getPointAtLengthLookup(totalLength/2)
+let pt = pathLengthLookup.getPointAtLength(totalLength/2)
 console.log(pt)
 ```
 
