@@ -17,61 +17,63 @@
 
     const { PI, sin, cos, acos, abs, sqrt, log } = Math;
 
+    function pointAtT(pts, t = 0.5) {
+
+        /**
+        * Linear  interpolation (LERP) helper
+        */
+        const interpolate = (p1, p2, t) => {
+            return {
+                x: (p2.x - p1.x) * t + p1.x,
+                y: (p2.y - p1.y) * t + p1.y
+            };
+        }
+
+        /**
+        * calculate single points on segments
+        */
+        const getPointAtCubicSegmentT = (p0, cp1, cp2, p, t) => {
+            let t1 = 1 - t;
+            return {
+                x:
+                    t1 ** 3 * p0.x +
+                    3 * t1 ** 2 * t * cp1.x +
+                    3 * t1 * t ** 2 * cp2.x +
+                    t ** 3 * p.x,
+                y:
+                    t1 ** 3 * p0.y +
+                    3 * t1 ** 2 * t * cp1.y +
+                    3 * t1 * t ** 2 * cp2.y +
+                    t ** 3 * p.y
+            };
+        }
+
+        const getPointAtQuadraticSegmentT = (p0, cp1, p, t) => {
+            let t1 = 1 - t;
+            return {
+                x: t1 * t1 * p0.x + 2 * t1 * t * cp1.x + t ** 2 * p.x,
+                y: t1 * t1 * p0.y + 2 * t1 * t * cp1.y + t ** 2 * p.y
+            };
+        }
+
+        let pt
+        if (pts.length === 4) {
+            pt = getPointAtCubicSegmentT(pts[0], pts[1], pts[2], pts[3], t)
+        }
+        else if (pts.length === 3) {
+            pt = getPointAtQuadraticSegmentT(pts[0], pts[1], pts[2], t)
+        }
+        else {
+            pt = interpolate(pts[0], pts[1], t)
+        }
+        return pt
+    }
+
+
+
+
     //pathLengthLookup
     Object.prototype.getPointAtLengthLookup = function (length = 0) {
-
-
-        const pointAtT = (pts, t = 0.5) => {
-
-            /**
-            * Linear  interpolation (LERP) helper
-            */
-            const interpolate = (p1, p2, t) => {
-                return {
-                    x: (p2.x - p1.x) * t + p1.x,
-                    y: (p2.y - p1.y) * t + p1.y
-                };
-            }
-
-            /**
-            * calculate single points on segments
-            */
-            const getPointAtCubicSegmentT = (p0, cp1, cp2, p, t) => {
-                let t1 = 1 - t;
-                return {
-                    x:
-                        t1 ** 3 * p0.x +
-                        3 * t1 ** 2 * t * cp1.x +
-                        3 * t1 * t ** 2 * cp2.x +
-                        t ** 3 * p.x,
-                    y:
-                        t1 ** 3 * p0.y +
-                        3 * t1 ** 2 * t * cp1.y +
-                        3 * t1 * t ** 2 * cp2.y +
-                        t ** 3 * p.y
-                };
-            }
-
-            const getPointAtQuadraticSegmentT = (p0, cp1, p, t) => {
-                let t1 = 1 - t;
-                return {
-                    x: t1 * t1 * p0.x + 2 * t1 * t * cp1.x + t ** 2 * p.x,
-                    y: t1 * t1 * p0.y + 2 * t1 * t * cp1.y + t ** 2 * p.y
-                };
-            }
-
-            let pt
-            if (pts.length === 4) {
-                pt = getPointAtCubicSegmentT(pts[0], pts[1], pts[2], pts[3], t)
-            }
-            else if (pts.length === 3) {
-                pt = getPointAtQuadraticSegmentT(pts[0], pts[1], pts[2], t)
-            }
-            else {
-                pt = interpolate(pts[0], pts[1], t)
-            }
-            return pt
-        }
 
 
         let { segments, totalLength } = this;
@@ -124,7 +126,7 @@
                         if (l1 + l2 === lBase) {
                             diffLength = end - length;
                             newT = 1 - (1 / total) * diffLength;
-                            pt = newT <= 1 ? interpolate(points[0], points[2], newT) : points[points.length - 1];
+                            pt = newT <= 1 ? pointAtT([points[0], points[2]], newT) : points[points.length - 1];
                         }
 
                         // is curve
@@ -295,11 +297,9 @@
 
             let wa48 = [[0.0647376968126839, 0.0323801709628694], [0.0644661644359501, 0.0970046992094627], [0.0639242385846482, 0.1612223560688917], [0.063114192286254, 0.2247637903946891], [0.0620394231598927, 0.2873624873554556], [0.0607044391658939, 0.3487558862921608], [0.0591148396983956, 0.4086864819907167], [0.0572772921004032, 0.4669029047509584], [0.0551995036999842, 0.523160974722233], [0.0528901894851937, 0.5772247260839727], [0.0503590355538545, 0.6288673967765136], [0.0476166584924905, 0.6778723796326639], [0.0446745608566943, 0.7240341309238146], [0.0415450829434647, 0.7671590325157404], [0.0382413510658307, 0.8070662040294426], [0.0347772225647704, 0.8435882616243935], [0.0311672278327981, 0.8765720202742479], [0.0274265097083569, 0.9058791367155696], [0.0235707608393244, 0.9313866907065543], [0.0196161604573555, 0.9529877031604309], [0.0155793157229438, 0.9705915925462473], [0.0114772345792345, 0.9841245837228269], [0.0073275539012763, 0.9935301722663508], [0.0031533460523058, 0.9987710072524261]];
 
-
             let wa = hq ? wa48 : wa24
             let sum = 0;
-
-
+            
             for (let i = 0, len = wa.length; i < len; i++) {
                 // weight and abscissa 
                 let [w, a] = [wa[i][0], wa[i][1]];
@@ -331,9 +331,9 @@
             let l1 = lineLength(p0, cp1) + lineLength(cp1, p);
             let l2 = lineLength(p0, p);
             if (l1 === l2) {
-                let m1 = interpolate(p0, cp1, t);
-                let m2 = interpolate(cp1, p, t);
-                p = interpolate(m1, m2, t);
+                let m1 = pointAtT([p0, cp1], t);
+                let m2 = pointAtT([cp1, p], t);
+                p = pointAtT([m1, m2], t);
                 let lengthL;
                 lengthL = sqrt((p.x - p0.x) * (p.x - p0.x) + (p.y - p0.y) * (p.y - p0.y));
                 return lengthL;
@@ -648,6 +648,11 @@
             }
         }
 
+
+
+
+
+
         /**
          * first M is always absolute/uppercase -
          * unless it adds relative linetos
@@ -789,7 +794,10 @@
             }
 
             return pathDataArc;
+
         }
+
+
     }
 
     pathDataLength.getPathLengthLookup = getPathLengthLookup;
