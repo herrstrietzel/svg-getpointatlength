@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>performance test</title>
+</head>
+
+<body>
+
+    <svg width="50%" id="svg" viewBox="0 0 20000 20000">
+        <path id="path" d="
+
+        M10000 0 a10000 10000 0 1 1 0 20000 a10000 10000 0 1 1 0 -20000 
+
+
+        
+        "></path>
+    </svg>
+
+
+    <!-- 
+M10000 0 a10000 10000 0 1 1 0 20000 a10000 10000 0 1 1 0 -20000 
+
+
+
+<script src="https://cdn.jsdelivr.net/gh/herrstrietzel/svg-getpointatlength@main/getPointAtLengthLookup.min.js"></script>
+-->
+<script src="../getPointAtLengthLookup.js"></script>
+
+    <script src="https://cdn.jsdelivr.net/gh/Kaiido/path2D-inspection@master/build/path2D-inspection.min.js"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/svg-path-properties@1.3.0/dist/svg-path-properties.min.js"></script>
+
+
+
+    <script>
+
+/*
+        const { getPathLengthLookup, getPathLengthFromD, getPathDataLength, getLength, parsepathDataNormalized } = pathDataLength;
+        */
+
+
+        let d = path.getAttribute('d')
+        let vertices = 1000;
+        let t0, t1, t2;
+
+        /**
+         * native
+         */
+        t0 = performance.now();
+        let pathLengthN = path.getTotalLength()
+        t1 = performance.now()
+        t2 = t1 - t0;
+        console.log('native – get totalLength: ', t2);
+
+        t0 = performance.now();
+        for (let i = 0; i < vertices; i++) {
+            let pt = path.getPointAtLength(pathLengthN / vertices * i)
+        }
+        t1 = performance.now()
+        t2 = t1 - t0;
+        console.log('native – points at length: ', t2);
+
+
+        /**
+         * svg-path-properties
+         */
+
+        t0 = performance.now();
+        let properties = new svgPathProperties.svgPathProperties(d);
+        let totalLengthProps = properties.getTotalLength();
+        t1 = performance.now()
+        t2 = t1 - t0;
+        console.log('svg-path-properties – get totalLength: ', t2);
+
+        t0 = performance.now();
+        let ptsP = []
+        for (let i = 0; i < vertices; i++) {
+            let pt = properties.getPointAtLength(totalLengthProps / vertices * i)
+            ptsP.push(pt)
+        }
+        t1 = performance.now()
+        t2 = t1 - t0;
+        console.log('svg-path-properties – points at length: ', t2);
+
+
+
+        /**
+         * path length lookup
+         */
+        t0 = performance.now();
+        //let pathLengthLookup = getPathLengthLookup(d, 12)
+        let pathLengthLookup = getPathLengthLookup(d)
+        let totalLengthL = pathLengthLookup.totalLength
+
+        t1 = performance.now()
+        t2 = t1 - t0;
+        console.log('pathLengthLookup – get totalLength: ', t2);
+
+        t0 = performance.now();
+        let ptsL = []
+        for (let i = 0; i < vertices; i++) {
+            let pt = pathLengthLookup.getPointAtLength(totalLengthL / vertices * i)
+            //let pt = pathLengthLookup.getPointAtLengthLookup(totalLengthL / vertices * i)
+            ptsL.push(pt)
+        }
+        t1 = performance.now()
+        t2 = t1 - t0;
+        console.log('pathLengthLookup – points at length: ', t2);
+        //console.log(ptsL);
+
+
+
+        /**
+         * Path2D Inspection
+         */ 
+
+
+         /*
+         t0 = performance.now();
+        let path2D = new Path2D(d);
+        let pathLength2D = path2D.getTotalLength();
+
+        t1 = performance.now()
+        t2 = t1 - t0;
+        console.log('pathLength2D – get totalLength: ', t2);
+
+        t0 = performance.now();
+        let pts2d = []
+        for (let i = 0; i < vertices; i++) {
+            let pt = path2D.getPointAtLength(pathLength2D / vertices * i)
+            pts2d.push(pt)
+        }
+        t1 = performance.now()
+        t2 = t1 - t0;
+        console.log('pathLength2D – points at length: ', t2);
+         //console.log(pathLength2D);
+         */
+
+        
+
+        
+
+
+
+
+        /**
+         * simple performance test
+         */
+
+        function perfStart() {
+            t0 = performance.now();
+        }
+
+        function perfEnd(text = '') {
+            t1 = performance.now();
+            total = t1 - t0;
+            console.log(`excecution time ${text}:  ${total} ms`);
+            return total;
+        }
+
+
+
+    </script>
+
+</body>
+
+</html>

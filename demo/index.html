@@ -57,6 +57,12 @@
             display: block;
 
         }
+
+        .previewPath {
+            fill: none;
+            stroke-width: 1%;
+            stroke: #000;
+        }
     </style>
 
 </head>
@@ -68,64 +74,94 @@
     <div class="grd">
         <div class="col">
             <h3>Get point at length</h3>
-            <p><input id="inputLength" type="range" value="2" min="0" max="1000" step="0.1"><span id="valLength"></span>
+
+            <!-- samples -->
+            <p>
+                <select id="inputExample" class="inputs">
+                </select>
             </p>
+
+            <h3>Point at length</h3>
+            <p><input id="inputLength" class="inputs" type="range" value="500" min="0" max="1000" step="0.1"><span
+                id="valLength"></span>
+        </p>
+
+            <h3>Legendre-Gauss lookup precision (0=auto – adjust accuracy) <span id="lgVal"></span></h3>
+            <p><input id="inputLg" class="inputs" type="range" value="12" max="256" step="2"></p>
+
+
+            <p id="totalL" style="display:none"></p>
 
             <p>Orange point= point calculated from pathpata; black point= calculated from getPointAtlength. Both point
                 should be as congruent as possible.</p>
 
+                <p>Circle circumference: 62831.853071796 (2π * 1000)
+                </p>
+
             <h3>Input you pathdata</h3>
             <textarea id="svgInput">
-                M  529 664  C  93 290  616 93  1942 385  C  1014 330  147 720  2059 70  C  1307 400  278 713  1686 691
     </textarea>
-
-
-
-
 
         </div>
 
         <div class="col">
 
             <svg id="svg" viewBox="0 0 100 100">
-                <path class="arc" id="arc1" fill="none" stroke="black" d="  
+                <path class="previewPath" d="  
     " />
 
                 <!-- native getPointAtLength-->
                 <circle id="splitN" cx="0" cy="0" r="2%" fill="gruen" fill-opacity="1" />
                 <!-- pathdata getPointAtLength-->
                 <circle id="split" cx="0" cy="0" r="1%" fill="orange" fill-opacity="1" />
-                <circle id="splitP" cx="0" cy="0" r="0.75%" fill="purple" fill-opacity="1" />
             </svg>
         </div>
 
 
-        
-        <script
-        src="../getPointAtLengthLookup.js"></script>
-        
+
+        <script src="../getPointAtLengthLookup.js"></script>
+        <script src="path_samples.js"></script>
+
 
         <script>
 
 
-            // import methods
-            const { getPathLengthLookup, getPathLengthFromD, getPathDataLength, getLength, parsepathDataNormalized } = pathDataLength;
 
             // init
             let path = document.querySelector('path')
             let svg = path.closest('svg')
+
+
+
+            /**
+             * load samples
+             */
+
+            // load examples
+            //console.log(samples);
+            for (key in samples) {
+                let option = document.createElement("option");
+                option.value = key;
+                option.innerHTML = key;
+                inputExample.append(option);
+            }
+
+            let first = inputExample.options[0];
+            first.selected = true;
+            svgInput.value = samples[first.value];
+
             let d = svgInput.value
             let steps = 1000
-            let highPrecision = true;
+            let lg = +inputLg.value;
 
             perfStart()
-            let pathLengthLookup = getPathLengthLookup(d, highPrecision)
+            let pathLengthLookup = getPathLengthLookup(d, lg)
             perfEnd()
+
 
 
             let totalLength = pathLengthLookup.totalLength
             let totalLengthN = path.getTotalLength()
-
 
 
 
@@ -138,11 +174,32 @@
                 updatePointAtlength()
             })
 
+
             inputLength.dispatchEvent(new Event('input'))
+            //inputExample.querySelector('option').selected = true;
+            inputExample.dispatchEvent(new Event('input'))
+
+
+
+            inputExample.addEventListener("input", (e) => {
+                // get svg markup
+                let example = samples[inputExample.value];
+                svgInput.value = example;
+                d = example;
+                svgInput.dispatchEvent(new Event("input"));
+                updatePointAtlength()
+
+            });
+
+
+            inputLg.addEventListener('input', e => {
+                updateSVG()
+            })
 
 
             function updateSVG() {
                 d = svgInput.value
+
                 path.setAttribute('d', d)
                 // adjust viewBox
                 let vB = path.getBBox()
@@ -153,14 +210,28 @@
 
 
             function updateLength() {
+
                 // get pathlength lookup
-                pathLengthLookup = getPathLengthLookup(d, highPrecision)
+                lg = +inputLg.value
+                lgVal.textContent = lg
+                pathLengthLookup = getPathLengthLookup(d, lg)
                 totalLength = pathLengthLookup.totalLength
 
                 // only pathLength
-                //totalLengthSimple = getPathLengthFromD(d)
+                totalLengthSimple = getPathLengthFromD(d, lg)
+
+                //console.log('just length', totalLengthSimple);
+
+
                 totalLengthN = path.getTotalLength()
-                console.log('native:', totalLengthN, 'from pathdata:', pathLengthLookup, 'diff: ', Math.abs(totalLengthN - totalLength));
+                //console.log('native:', totalLengthN, 'from pathdata:', pathLengthLookup, 'diff: ', Math.abs(totalLengthN - totalLength));
+
+                totalL.textContent = ['native:', totalLengthN, 'lookup: ', totalLength, totalLengthN - totalLength].join(' || ')
+                updatePointAtlength()
+
+                //console.log(pathLengthLookup);
+
+
             }
 
 
@@ -170,7 +241,7 @@
 
                 // get point at Length
                 let currentLength = totalLength / steps * value
-                let pt = pathLengthLookup.getPointAtLengthLookup(currentLength)
+                let pt = pathLengthLookup.getPointAtLength(currentLength)
                 valLength.textContent = `${currentLength} / ${totalLength} (diff: ${Math.abs(totalLengthN - totalLength)} ) `
 
 
@@ -186,20 +257,20 @@
 
 
 
-/**
- * simple performance test
- */
+            /**
+             * simple performance test
+             */
 
- function perfStart() {
-    t0 = performance.now();
-}
+            function perfStart() {
+                t0 = performance.now();
+            }
 
-function perfEnd(text = '') {
-    t1 = performance.now();
-    total = t1 - t0;
-    console.log(`excecution time ${text}:  ${total} ms`);
-    return total;
-}
+            function perfEnd(text = '') {
+                t1 = performance.now();
+                total = t1 - t0;
+                console.log(`excecution time ${text}:  ${total} ms`);
+                return total;
+            }
 
 
 

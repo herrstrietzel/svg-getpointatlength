@@ -15,7 +15,16 @@
 
     /** function defs **/
 
-    const { PI, sin, cos, acos, abs, sqrt, log } = Math;
+    const { PI, sin, cos, acos, abs, sqrt, log, tan } = Math;
+
+    // Legendre Gauss weight and abissae values
+    const lgVals = {
+
+        wa12: [[0.24914704581340288, 0.12523340851146894], [0.23349253653835458, 0.3678314989981802], [0.20316742672306584, 0.5873179542866175], [0.16007832854334633, 0.7699026741943047], [0.10693932599531818, 0.9041172563704748], [0.04717533638650846, 0.9815606342467192]],
+
+        wa24: [[0.1279381953467522, 0.0640568928626056], [0.1258374563468283, 0.1911188674736163], [0.1216704729278034, 0.3150426796961634], [0.1155056680537256, 0.4337935076260451], [0.1074442701159656, 0.5454214713888396], [0.0976186521041139, 0.6480936519369755], [0.0861901615319533, 0.7401241915785544], [0.0733464814110803, 0.820001985973903], [0.0592985849154368, 0.8864155270044011], [0.0442774388174198, 0.9382745520027328], [0.0285313886289337, 0.9747285559713095], [0.0123412297999872, 0.9951872199970213]]
+    }
+
 
     function pointAtT(pts, t = 0.5) {
 
@@ -71,11 +80,16 @@
 
 
 
+    function PathLengthObject(totalLength, segments) {
+        this.totalLength = totalLength || 0;
+        this.segments = segments || [];
+    }
+
 
     //pathLengthLookup
-    Object.prototype.getPointAtLengthLookup = function (length = 0) {
+    PathLengthObject.prototype.getPointAtLength = function (length = 0) {
 
-
+        //console.log(this);
         let { segments, totalLength } = this;
         let foundSegment = false;
         let pt = { x: 0, y: 0 };
@@ -87,7 +101,7 @@
         }
 
         // last point on path
-        if (length.toFixed(3) == totalLength.toFixed(3)) {
+        if (+length.toFixed(3) === +totalLength.toFixed(3)) {
             let { points } = segments[segments.length - 1];
             pt = points[points.length - 1];
             return pt;
@@ -161,7 +175,7 @@
         return pt;
     }
 
-    function getPathLengthLookup(d, hq = true, onlyLength = false) {
+    function getPathLengthLookup(d, lg = 0, onlyLength = false) {
 
         // get pathdata
         let pathData = Array.isArray(d) ? d : parsepathDataNormalized(d);
@@ -169,6 +183,9 @@
         let pathLength = 0;
         let M = pathData[0];
         let lengthLookup = { totalLength: 0, segments: [] };
+
+        // auto adjust legendre-gauss accuracy
+        let auto_lg = lg===0 ? true : false;
 
         for (let i = 1; i < pathData.length; i++) {
             let comPrev = pathData[i - 1];
@@ -217,12 +234,73 @@
                     cp2 = type === 'C' ? { x: values[2], y: values[3] } : cp1;
 
                     let pts = type === 'C' ? [p0, cp1, cp2, p] : [p0, cp1, p];
-                    len = getLength(pts, 1, hq)
 
-                    if (!onlyLength) {
+                    //// is flat/linear – treat as lineto
+                    const polygonArea = (points) => {
+                        let area = 0;
+                        for (let i = 0; i < points.length; i++) {
+                            const addX = points[i].x;
+                            const addY = points[i === points.length - 1 ? 0 : i + 1].y;
+                            const subX = points[i === points.length - 1 ? 0 : i + 1].x;
+                            const subY = points[i].y;
+                            area += addX * addY * 0.5 - subX * subY * 0.5;
+                        }
+
+                        return abs(area);
+                    }
+
+                    let isFlat = polygonArea(pts) < 0.1
+                    // treat as lineto
+                    if (isFlat) {
+                        pts = [p0, p]
+                        len = getLength(pts)
+                        lengthObj.type = "L";
+                        lengthObj.points.push(p0, p);
+                        //console.log('no area flat', pts, isFlat, len);
+                        break;
+                    } else {
+
+                        //auto_lg = false;
+                        lg = auto_lg ? 12 : lg;
+                        let lgArr = [12, 24, 36, 48, 72, 96];
+                        len = !auto_lg ? getLength(pts, 1, lg) : getLength(pts, 1, lgArr[0]);
+
+                        /**
+                         * auto adjust accuracy for cubic bezier approximation
+                         */
+                        
+                         if (type === 'C' && auto_lg) {
+
+                            let lenNew;
+                            let foundAccuracy = false
+                            let tol = 0.05
+                            let diff = 0;
+
+                            for (let i = 1; i < lgArr.length && !foundAccuracy; i++) {
+                                lgNew = lgArr[i];
+                                lenNew = getLength(pts, 1, lgNew)
+
+                                //precise enough or last
+                                diff = abs(lenNew - len)
+                                if (diff < tol || i === lgArr.length - 1) {
+                                    lg = lgNew
+                                    foundAccuracy = true
+                                    //console.log('best lg', diff, lg);
+                                }
+                                // not precise
+                                else {
+                                    len = lenNew
+                                    //console.log('diff', diff, lg, lgNew);
+                                }
+                            }
+                            //console.log('needs n=', lg);
+                        }
+                    }
+
+                    if (!onlyLength && !isFlat) {
                         for (let d = 1; d < tDivisions; d++) {
                             t = (1 / tDivisions) * d;
-                            lengthObj.lengths.push(getLength(pts, t, hq) + pathLength);
+                            lengthObj.lengths.push(getLength(pts, t, lg) + pathLength);
                         }
                         lengthObj.points = pts;
                     }
@@ -245,23 +323,26 @@
             lengthLookup.totalLength = pathLength;
         }
 
-        return onlyLength ? pathLength : lengthLookup;
+        if (onlyLength) {
+            return pathLength;
+        } else {
+            return new PathLengthObject(lengthLookup.totalLength, lengthLookup.segments);
+        }
     }
 
 
-    function getPathLengthFromD(d, hq = true) {
+    function getPathLengthFromD(d, lg = 0) {
         let pathData = parsepathDataNormalized(d);
-        return getPathDataLength(pathData, hq)
+        return getPathDataLength(pathData, lg)
     }
 
 
     // only total pathlength
-    function getPathDataLength(pathData, hq = true) {
-        return getPathLengthLookup(pathData, hq, true)
+    function getPathDataLength(pathData, lg = 0) {
+        return getPathLengthLookup(pathData, lg, true)
     }
 
-    function getLength(pts, t = 1, hq = true) {
-
+    function getLength(pts, t = 1, lg = 0) {
 
         const lineLength = (p1, p2) => {
             return sqrt(
@@ -273,10 +354,41 @@
          * Based on snap.svg bezlen() function
          * https://github.com/adobe-webplatform/Snap.svg/blob/master/dist/snap.svg.js#L5786
          */
-        const cubicBezierLength = (p0, cp1, cp2, p, t, hq) => {
+        const cubicBezierLength = (p0, cp1, cp2, p, t, lg) => {
             if (t === 0) {
                 return 0;
             }
+
+            const getLegendreGaussValues = (n, x1 = -1, x2 = 1) => {
+                let waArr = []
+                let z1, z, xm, xl, pp, p3, p2, p1;
+                const m = (n + 1) >> 1;
+                xm = 0.5 * (x2 + x1);
+                xl = 0.5 * (x2 - x1);
+
+                for (let i = m - 1; i >= 0; i--) {
+                    z = cos((PI * (i + 0.75)) / (n + 0.5));
+                    do {
+                        p1 = 1;
+                        p2 = 0;
+                        for (let j = 0; j < n; j++) {
+                            //Loop up the recurrence relation to get the Legendre polynomial evaluated at z.
+                            p3 = p2;
+                            p2 = p1;
+                            p1 = ((2 * j + 1) * z * p2 - j * p3) / (j + 1);
+                        }
+
+                        pp = (n * (z * p1 - p2)) / (z * z - 1);
+                        z1 = z;
+                        z = z1 - p1 / pp; //Newton’s method
+
+                    } while (abs(z - z1) > 1.0e-14);
+                    waArr.push([(2 * xl) / ((1 - z * z) * pp * pp), xm + xl * z])
+                }
+                return waArr;
+            }
+
+
             const base3 = (t, p1, p2, p3, p4) => {
                 let t1 = -3 * p1 + 9 * p2 - 9 * p3 + 3 * p4,
                     t2 = t * t1 + 6 * p1 - 12 * p2 + 6 * p3;
@@ -286,22 +398,21 @@
             let t2 = t / 2;
 
             /**
-             * set higher hq 
+             * set higher legendre gauss weight abscissae values 
              * by more accurate weight/abscissa  lookups 
              * https://pomax.github.io/bezierinfo/legendre-gauss.html
              */
 
+            // add values if not existent
+            if (!lgVals[lg]) {
+                lgVals[lg] = getLegendreGaussValues(lg)
+            }
 
-            let wa24 = [[0.1279381953467522, 0.0640568928626056], [0.1258374563468283, 0.1911188674736163], [0.1216704729278034, 0.3150426796961634], [0.1155056680537256, 0.4337935076260451], [0.1074442701159656, 0.5454214713888396], [0.0976186521041139, 0.6480936519369755], [0.0861901615319533, 0.7401241915785544], [0.0733464814110803, 0.820001985973903], [0.0592985849154368, 0.8864155270044011], [0.0442774388174198, 0.9382745520027328], [0.0285313886289337, 0.9747285559713095], [0.0123412297999872, 0.9951872199970213]];
-
-
-            let wa48 = [[0.0647376968126839, 0.0323801709628694], [0.0644661644359501, 0.0970046992094627], [0.0639242385846482, 0.1612223560688917], [0.063114192286254, 0.2247637903946891], [0.0620394231598927, 0.2873624873554556], [0.0607044391658939, 0.3487558862921608], [0.0591148396983956, 0.4086864819907167], [0.0572772921004032, 0.4669029047509584], [0.0551995036999842, 0.523160974722233], [0.0528901894851937, 0.5772247260839727], [0.0503590355538545, 0.6288673967765136], [0.0476166584924905, 0.6778723796326639], [0.0446745608566943, 0.7240341309238146], [0.0415450829434647, 0.7671590325157404], [0.0382413510658307, 0.8070662040294426], [0.0347772225647704, 0.8435882616243935], [0.0311672278327981, 0.8765720202742479], [0.0274265097083569, 0.9058791367155696], [0.0235707608393244, 0.9313866907065543], [0.0196161604573555, 0.9529877031604309], [0.0155793157229438, 0.9705915925462473], [0.0114772345792345, 0.9841245837228269], [0.0073275539012763, 0.9935301722663508], [0.0031533460523058, 0.9987710072524261]];
-
-            let wa = hq ? wa48 : wa24
+            wa = lgVals[lg]
             let sum = 0;
-            
+
             for (let i = 0, len = wa.length; i < len; i++) {
-                // weight and abscissa 
+                // weight and abscissae 
                 let [w, a] = [wa[i][0], wa[i][1]];
                 let ct1_t = t2 * a;
                 let ct1 = ct1_t + t2;
@@ -322,21 +433,18 @@
         }
 
 
-        const quadraticBezierLength = (p0, cp1, p, t) => {
+        const quadraticBezierLength = (p0, cp1, p, t, checkFlat=false) => {
             if (t === 0) {
                 return 0;
             }
 
-            // is flat/linear 
-            let l1 = lineLength(p0, cp1) + lineLength(cp1, p);
-            let l2 = lineLength(p0, p);
-            if (l1 === l2) {
-                let m1 = pointAtT([p0, cp1], t);
-                let m2 = pointAtT([cp1, p], t);
-                p = pointAtT([m1, m2], t);
-                let lengthL;
-                lengthL = sqrt((p.x - p0.x) * (p.x - p0.x) + (p.y - p0.y) * (p.y - p0.y));
-                return lengthL;
+            // is flat/linear – treat as line
+            if(checkFlat){
+                let l1 = lineLength(p0, cp1) + lineLength(cp1, p);
+                let l2 = lineLength(p0, p);
+                if (l1 === l2) {
+                    return l2;
+                }
             }
 
             let a, b, c, d, e, e1, d1, v1x, v1y;
@@ -367,10 +475,10 @@
 
         let length
         if (pts.length === 4) {
-            length = cubicBezierLength(pts[0], pts[1], pts[2], pts[3], t, hq)
+            length = cubicBezierLength(pts[0], pts[1], pts[2], pts[3], t, lg)
         }
         else if (pts.length === 3) {
-            length = quadraticBezierLength(pts[0], pts[1], pts[2], t, hq)
+            length = quadraticBezierLength(pts[0], pts[1], pts[2], t, lg)
         }
         else {
             length = lineLength(pts[0], pts[1])
@@ -409,12 +517,13 @@
             ...{
                 toAbsolute: true,
                 toLonghands: true,
-                arcToCubic: true
+                arcToCubic: true,
+                arcAccuracy: 3,
             },
             ...options
         }
 
-        let { toAbsolute, toLonghands, arcToCubic } = options;
+        let { toAbsolute, toLonghands, arcToCubic, arcAccuracy } = options;
         let hasArcs = arcToCubic ? /[a]/gi.test(d) : false;
         let hasShorthands = toLonghands ? /[vhst]/gi.test(d) : false;
         let hasRelative = toAbsolute ? /[lcqamts]/g.test(d.substring(1, d.length - 1)) : false;
@@ -617,7 +726,7 @@
                     if (hasArcs && com.type === 'A') {
                         p0 = { x: lastX, y: lastY }
                         if (typeRel === 'a') {
-                            let comArc = arcToBezier(p0, com.values)
+                            let comArc = arcToBezier(p0, com.values, arcAccuracy)
                             comArc.forEach(seg => {
                                 pathData.push(seg);
                             })
@@ -797,7 +906,6 @@
 
         }
 
-
     }
 
     pathDataLength.getPathLengthLookup = getPathLengthLookup;
@@ -808,3 +916,10 @@
 
     return pathDataLength;
 });
+
+
+if (typeof module === 'undefined') {
+    var { getPathLengthLookup, getPathLengthFromD, getPathDataLength, getLength, parsepathDataNormalized } = pathDataLength;
+}
+
+

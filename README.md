@@ -99,8 +99,10 @@ let pt = pathLengthLookup.getPointAtLengthLookup(totalLength/2)
 console.log(pt)
 ```
 
-## Accuracy?
-In fact the native browser methods `getTotalLength()` and `getPointAtlength()` return different results in Firefox, chromium/blink and webkit. Compared against reproducible/calculable objects/shapes like circles the methods provided by this library may actually provide a more [accurate result](https://stackoverflow.com/questions/30277646/svg-convert-arcs-to-cubic-bezier/77538979#77538979). In the end ... let's call it a draw. For scientific precision you'd need a more expensive iterative approach.  
+## Accuracy
+In fact the native browser methods `getTotalLength()` and `getPointAtlength()` return different results in Firefox, chromium/blink and webkit.   
+
+Compared against reproducible/calculable objects/shapes like circles the methods provided by this library may actually provide a more [accurate result](https://stackoverflow.com/questions/30277646/svg-convert-arcs-to-cubic-bezier/77538979#77538979). In the end ... let's call it a draw. For scientific precision you'd need a more expensive iterative approach.  
 
 
 ## How it works
@@ -115,7 +117,8 @@ Since we can't directly translate `t` values (using the de Casteljau's algorithm
 When searching for a point at length we use this lookup to find the closest t based sub-segment length and calculate an interpolated new `t` value to get a close approximation.
 
 
-## Similar libraries
+## Alternative libraries
+[Kaiido's "path2D-inspection"](https://github.com/Kaiido/path2D-inspection) – interesting if yo're foremost working with canvas
 [rveciana's "svg-path-properties"](https://github.com/rveciana/svg-path-properties) 
 
 
