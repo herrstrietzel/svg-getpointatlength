@@ -11,9 +11,10 @@
         }
 
         svg {
-            width: 100%;
+            width: 50%;
             overflow: visible;
             border: 1px solid #ccc;
+            padding: 20%;
         }
 
 
@@ -48,6 +49,9 @@
 
         }
 
+
+        select,
+        input[type="text"] ,
         input[type="range"] {
             width: 100%;
             display: block
@@ -82,21 +86,21 @@
             </p>
 
             <h3>Point at length</h3>
-            <p><input id="inputLength" class="inputs" type="range" value="500" min="0" max="1000" step="0.1"><span
-                id="valLength"></span>
-        </p>
+            <p><input id="inputLength" class="inputs" type="range" value="250" min="0" max="1000" step="0.1"><span
+                    id="valLength"></span>
+            </p>
 
-            <h3>Legendre-Gauss lookup precision (0=auto – adjust accuracy) <span id="lgVal"></span></h3>
-            <p><input id="inputLg" class="inputs" type="range" value="12" max="256" step="2"></p>
+            <h3>Accuracy</h3>
+            <p id="resAcc"></p>
+
+            <h3>Legendre-Gauss lookup precision for  cubic beziers (0=auto – adjust accuracy) <span id="lgVal"></span></h3>
+            <p><input id="inputLg" class="inputs" type="range" value="0" max="128" step="1"></p>
 
 
             <p id="totalL" style="display:none"></p>
-
             <p>Orange point= point calculated from pathpata; black point= calculated from getPointAtlength. Both point
                 should be as congruent as possible.</p>
 
-                <p>Circle circumference: 62831.853071796 (2π * 1000)
-                </p>
 
             <h3>Input you pathdata</h3>
             <textarea id="svgInput">
@@ -118,8 +122,42 @@
         </div>
 
 
+        <script>
+
+
+            function renderPoint(
+                svg,
+                coords,
+                fill = "red",
+                r = "2",
+                opacity = "1",
+                id = "",
+                className = ""
+            ) {
+                //console.log(coords);
+                if (Array.isArray(coords)) {
+                    coords = {
+                        x: coords[0],
+                        y: coords[1]
+                    };
+                }
+
+                let marker = `<circle class="${className}" opacity="${opacity}" id="${id}" cx="${coords.x}" cy="${coords.y}" r="${r}" fill="${fill}">
+  <title>${coords.x} ${coords.y}</title></circle>`;
+                svg.insertAdjacentHTML("beforeend", marker);
+            }
+
+
+        </script>
+
 
         <script src="../getPointAtLengthLookup.js"></script>
+
+        <!-- 
+            <script src="../pathDataGetBBox.js"></script>
+        -->
+
+        <script src="../getPointAtLengthLookup_getArea.js"></script>
         <script src="path_samples.js"></script>
 
 
@@ -137,35 +175,44 @@
              * load samples
              */
 
-            // load examples
-            //console.log(samples);
-            for (key in samples) {
+            // load examples            
+            for (let i = 0; i<samples.length; i++  ) {
+                let sample = samples[i]
+               // console.log(sample);
+
+                let key = Object.keys(sample)[0];
+                //console.log(key);
+
                 let option = document.createElement("option");
-                option.value = key;
+                option.value = sample[key];
                 option.innerHTML = key;
                 inputExample.append(option);
             }
 
             let first = inputExample.options[0];
             first.selected = true;
-            svgInput.value = samples[first.value];
+            svgInput.value = first.value;
+
+
 
             let d = svgInput.value
             let steps = 1000
             let lg = +inputLg.value;
+            let resIdeal=''
+
 
             perfStart()
             let pathLengthLookup = getPathLengthLookup(d, lg)
             perfEnd()
 
 
-
             let totalLength = pathLengthLookup.totalLength
             let totalLengthN = path.getTotalLength()
 
+            //updateSVG();
+            //updatePointAtlength()
 
 
-            updateSVG();
             svgInput.addEventListener('input', e => {
                 updateSVG();
             })
@@ -175,16 +222,17 @@
             })
 
 
-            inputLength.dispatchEvent(new Event('input'))
-            //inputExample.querySelector('option').selected = true;
-            inputExample.dispatchEvent(new Event('input'))
-
-
-
+            /**
+             * load samples
+            */
             inputExample.addEventListener("input", (e) => {
                 // get svg markup
-                let example = samples[inputExample.value];
+                let example = inputExample.value;
                 svgInput.value = example;
+
+                let index = e.target.options.selectedIndex;
+                resIdeal = samples[index].res
+
                 d = example;
                 svgInput.dispatchEvent(new Event("input"));
                 updatePointAtlength()
@@ -201,8 +249,17 @@
                 d = svgInput.value
 
                 path.setAttribute('d', d)
+                totalLengthN = path.getTotalLength()
+
+                //console.log(path);
+                //let bbP = getBBoxFromD(d)
+
+
+
                 // adjust viewBox
                 let vB = path.getBBox()
+                //console.log(bbP, vB);
+
                 svg.setAttribute('viewBox', [vB.x, vB.y, vB.width, vB.height].join(' '))
 
                 updateLength()
@@ -217,18 +274,24 @@
                 pathLengthLookup = getPathLengthLookup(d, lg)
                 totalLength = pathLengthLookup.totalLength
 
+
+
+                // get area
+               let pathData = parsePathDataNormalized(d, {arcToCubic: false })
+               //console.log(pathData);
+
+               let area = getPathArea(pathData)
+               //console.log('area', area, Math.PI*10000**2);
+               console.log('area', area);
+
+
+
                 // only pathLength
                 totalLengthSimple = getPathLengthFromD(d, lg)
-
                 //console.log('just length', totalLengthSimple);
 
 
-                totalLengthN = path.getTotalLength()
-                //console.log('native:', totalLengthN, 'from pathdata:', pathLengthLookup, 'diff: ', Math.abs(totalLengthN - totalLength));
-
-                totalL.textContent = ['native:', totalLengthN, 'lookup: ', totalLength, totalLengthN - totalLength].join(' || ')
                 updatePointAtlength()
-
                 //console.log(pathLengthLookup);
 
 
@@ -241,14 +304,29 @@
 
                 // get point at Length
                 let currentLength = totalLength / steps * value
-                let pt = pathLengthLookup.getPointAtLength(currentLength)
-                valLength.textContent = `${currentLength} / ${totalLength} (diff: ${Math.abs(totalLengthN - totalLength)} ) `
+                let pt = pathLengthLookup.getPointAtLength(currentLength);
+
+            
+  
+                resAcc.innerHTML = `
+                <strong>length:</strong> ${totalLength} <br>
+                <strong>length Native:</strong> ${totalLengthN} <br>
+                <strong>ideal length:</strong> ${resIdeal} <br>
+                <strong>diff from ideal:</strong> ${totalLength - resIdeal} <br>
+                <strong>diff from native:</strong> ${totalLengthN - totalLength} <br>
+                `;
 
 
+                
                 split.setAttribute('cx', pt.x)
                 split.setAttribute('cy', pt.y)
 
+                
+
                 // native method get point at length – just for comparison
+                totalLengthN = path.getTotalLength()
+                //console.log(path);
+
                 let ptN = path.getPointAtLength(totalLengthN / steps * value)
                 splitN.setAttribute('cx', ptN.x)
                 splitN.setAttribute('cy', ptN.y)
@@ -271,6 +349,11 @@
                 console.log(`excecution time ${text}:  ${total} ms`);
                 return total;
             }
+
+
+
+            inputExample.dispatchEvent(new Event('input'))
+            inputLength.dispatchEvent(new Event('input'))
 
 
 
