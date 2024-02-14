@@ -115,8 +115,8 @@ When searching for a point at length we use this lookup to find the closest t ba
 
 
 ## Alternative libraries
-[Kaiido's "path2D-inspection"](https://github.com/Kaiido/path2D-inspection) – interesting if yo're foremost working with canvas
-[rveciana's "svg-path-properties"](https://github.com/rveciana/svg-path-properties) 
+* [Kaiido's "path2D-inspection"](https://github.com/Kaiido/path2D-inspection) – interesting if yo're foremost working with canvas   
+* [rveciana's "svg-path-properties"](https://github.com/rveciana/svg-path-properties) 
 
 
 ## Demos
