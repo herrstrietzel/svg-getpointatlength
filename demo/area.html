@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Get point at length</title>
+
+    <style>
+        body {
+            font-family: sans-serif;
+        }
+
+        svg {
+            width: 50%;
+            overflow: visible;
+            border: 1px solid #ccc;
+            padding: 20%;
+        }
+
+
+
+        .grd {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2em;
+            height: 95vh;
+        }
+
+
+        .col {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+            justify-content: flex-start;
+        }
+
+        .col * {
+            margin-top: 0;
+            margin-bottom: 1rem;
+        }
+
+        textarea {
+            width: 100%;
+            display: block;
+            min-height: 10em;
+            height: 50%;
+            flex: 1 1 auto;
+
+        }
+
+
+        select,
+        input[type="text"],
+        input[type="range"] {
+            width: 100%;
+            display: block
+        }
+
+        #valLength {
+            display: block;
+
+        }
+
+        .previewPath {
+            fill: none;
+            stroke-width: 1%;
+            stroke: #000;
+        }
+    </style>
+
+</head>
+
+<body>
+
+
+
+    <div class="grd">
+        <div class="col">
+            <h3>Get point at length and area</h3>
+
+            <!-- samples -->
+            <p>
+                <select id="inputExample" class="inputs">
+                </select>
+            </p>
+
+            <h3>Point at length</h3>
+            <p><input id="inputLength" class="inputs" type="range" value="250" min="0" max="1000" step="0.1"><span
+                    id="valLength"></span>
+            </p>
+
+            <h3>Results
+            </h3>
+            <p><strong>Area: </strong><pre id="resArea"></pre> 
+                <strong>Length: </strong><pre id="resLength"></pre>
+                <strong>point at length: </strong><pre id="resPt"></pre>
+                <strong>bbox: </strong><pre id="resBB"></pre>
+            </p>
+
+
+            <!-- 
+                <h3>Legendre-Gauss lookup precision for  cubic beziers (0=auto – adjust accuracy) <span id="lgVal"></span></h3>
+                <p><input id="inputLg" class="inputs" type="range" value="0" max="128" step="1"></p>
+            -->
+
+
+            <p id="totalL" style="display:none"></p>
+            <p>Orange point= point calculated from pathpata; black point= calculated from getPointAtlength. Both point
+                should be as congruent as possible.</p>
+
+
+            <h3>Input you pathdata</h3>
+            <textarea id="svgInput">
+    </textarea>
+
+        </div>
+
+        <div class="col">
+
+            <svg id="svg" viewBox="0 0 100 100">
+                <path class="previewPath" d="  
+    " />
+
+                <!-- native getPointAtLength-->
+                <circle id="splitN" cx="0" cy="0" r="2%" fill="gruen" fill-opacity="1" />
+                <!-- pathdata getPointAtLength-->
+                <circle id="split" cx="0" cy="0" r="1%" fill="orange" fill-opacity="1" />
+            </svg>
+        </div>
+
+
+        <script>
+
+
+            function renderPoint(
+                svg,
+                coords,
+                fill = "red",
+                r = "2",
+                opacity = "1",
+                id = "",
+                className = ""
+            ) {
+                //console.log(coords);
+                if (Array.isArray(coords)) {
+                    coords = {
+                        x: coords[0],
+                        y: coords[1]
+                    };
+                }
+
+                let marker = `<circle class="${className}" opacity="${opacity}" id="${id}" cx="${coords.x}" cy="${coords.y}" r="${r}" fill="${fill}">
+  <title>${coords.x} ${coords.y}</title></circle>`;
+                svg.insertAdjacentHTML("beforeend", marker);
+            }
+
+
+        </script>
+
+
+        <script src="../getPointAtLengthLookup.js"></script>
+
+        <!-- 
+            <script src="../pathDataGetBBox.js"></script>
+        -->
+
+        <script src="../getPointAtLengthLookup_getArea.js"></script>
+        <script src="path_samples.js"></script>
+
+
+        <script>
+
+
+
+            // init
+            let path = document.querySelector('path')
+            let svg = path.closest('svg')
+
+
+
+            /**
+             * load samples
+             */
+
+            // load examples            
+            for (let i = 0; i < samples.length; i++) {
+                let sample = samples[i]
+                // console.log(sample);
+
+                let key = Object.keys(sample)[0];
+                //console.log(key);
+
+                let option = document.createElement("option");
+                option.value = sample[key];
+                option.innerHTML = key;
+                inputExample.append(option);
+            }
+
+            let first = inputExample.options[0];
+            first.selected = true;
+            svgInput.value = first.value;
+
+
+
+            let d = svgInput.value
+            let steps = 1000
+
+
+            perfStart()
+            let pathLengthLookup = getPathLengthLookup(d)
+            perfEnd()
+
+
+            let totalLength = pathLengthLookup.totalLength
+            let totalLengthN = path.getTotalLength()
+
+            //updateSVG();
+            //updatePointAtlength()
+
+            svgInput.addEventListener('input', e => {
+                updateSVG();
+            })
+
+            inputLength.addEventListener('input', e => {
+                updatePointAtlength()
+            })
+
+
+            /**
+             * load samples
+            */
+            inputExample.addEventListener("input", (e) => {
+                // get svg markup
+                let example = inputExample.value;
+                svgInput.value = example;
+
+                let index = e.target.options.selectedIndex;
+                //resIdeal = samples[index].res
+
+                d = example;
+                svgInput.dispatchEvent(new Event("input"));
+                updatePointAtlength()
+
+            });
+
+
+            function updateSVG() {
+                d = svgInput.value
+
+                path.setAttribute('d', d)
+                totalLengthN = path.getTotalLength()
+
+
+                // get area
+                let pathData = parsePathDataNormalized(d, { arcToCubic: false })
+                //console.log(pathData);
+
+                let area = getPathArea(pathData)
+                //console.log('area', area, Math.PI*10000**2);
+                console.log('area', area);
+                resArea.textContent = area
+
+
+                //console.log(path);
+                let bb = getPathDataBBox(pathData)
+
+                resBB.textContent = JSON.stringify(bb)
+
+
+                // adjust viewBox
+                let vB = path.getBBox()
+                //console.log(bbP, vB);
+
+                svg.setAttribute('viewBox', [vB.x, vB.y, vB.width, vB.height].join(' '))
+                updateLength()
+            }
+
+
+            function updateLength() {
+
+                // get pathlength lookup
+                pathLengthLookup = getPathLengthLookup(d)
+                totalLength = pathLengthLookup.totalLength
+                resLength.textContent = totalLength
+
+
+                // only pathLength
+                //totalLengthSimple = getPathLengthFromD(d, lg)
+                //console.log('just length', totalLengthSimple);
+
+
+                updatePointAtlength()
+                //console.log(pathLengthLookup);
+
+
+            }
+
+
+            function updatePointAtlength() {
+                let value = +inputLength.value
+
+
+                // get point at Length
+                let currentLength = totalLength / steps * value
+                let pt = pathLengthLookup.getPointAtLength(currentLength);
+
+                resPt.textContent = JSON.stringify(pt)
+
+
+
+
+                split.setAttribute('cx', pt.x)
+                split.setAttribute('cy', pt.y)
+
+
+
+                // native method get point at length – just for comparison
+                totalLengthN = path.getTotalLength()
+                //console.log(path);
+
+                let ptN = path.getPointAtLength(totalLengthN / steps * value)
+                splitN.setAttribute('cx', ptN.x)
+                splitN.setAttribute('cy', ptN.y)
+
+            }
+
+
+
+            /**
+             * simple performance test
+             */
+
+            function perfStart() {
+                t0 = performance.now();
+            }
+
+            function perfEnd(text = '') {
+                t1 = performance.now();
+                total = t1 - t0;
+                console.log(`excecution time ${text}:  ${total} ms`);
+                return total;
+            }
+
+
+
+            inputExample.dispatchEvent(new Event('input'))
+            inputLength.dispatchEvent(new Event('input'))
+
+
+
+        </script>
+
+</body>
+
+</html>
