@@ -13,7 +13,6 @@
 })(this, function () {
     var pathDataLength = {};
 
-    /** function defs **/
 
     const { PI, sin, cos, acos, abs, sqrt, log, tan } = Math;
 
@@ -24,7 +23,6 @@
 
         wa24: [[0.1279381953467522, 0.0640568928626056], [0.1258374563468283, 0.1911188674736163], [0.1216704729278034, 0.3150426796961634], [0.1155056680537256, 0.4337935076260451], [0.1074442701159656, 0.5454214713888396], [0.0976186521041139, 0.6480936519369755], [0.0861901615319533, 0.7401241915785544], [0.0733464814110803, 0.820001985973903], [0.0592985849154368, 0.8864155270044011], [0.0442774388174198, 0.9382745520027328], [0.0285313886289337, 0.9747285559713095], [0.0123412297999872, 0.9951872199970213]]
     }
-
 
     function pointAtT(pts, t = 0.5) {
 
@@ -143,12 +141,12 @@
                         //console.log(p0, segment.points );
                         //let p2 = segment.points[2]
                         p0 = segment.points[0]
-                        
+
                         pt = {
                             x: (cosA * (p0.x - cx)) + (sinA * (p0.y - cy)) + cx,
                             y: (cosA * (p0.y - cy)) - (sinA * (p0.x - cx)) + cy
                         }
-                        
+
                         break;
                     case 'C':
                     case 'Q':
@@ -241,8 +239,9 @@
                     break;
 
                 case "Z":
+                case "z":
                 case "L":
-                    if (type === 'Z') {
+                    if (type.toLowerCase() === 'z') {
                         // line to previous M
                         p = { x: M.values[0], y: M.values[1] };
                         lengthObj.type = "L";
@@ -250,7 +249,6 @@
                     len = getLength([p0, p]);
                     lengthObj.points.push(p0, p);
                     break;
-
 
                 case "A":
                     p = {
@@ -570,7 +568,7 @@
         }
 
         let { toAbsolute, toLonghands, arcToCubic, arcAccuracy } = options;
-        let hasArcs =  /[a]/gi.test(d) ;
+        let hasArcs = /[a]/gi.test(d);
         let hasShorthands = toLonghands ? /[vhst]/gi.test(d) : false;
         let hasRelative = toAbsolute ? /[lcqamts]/g.test(d.substring(1, d.length - 1)) : false;
 
@@ -779,7 +777,7 @@
                             let largeArc = com.values[3]
                             let sweep = com.values[4]
 
-                             isElliptic = com.values[0] === com.values[1] ? false : true;
+                            isElliptic = com.values[0] === com.values[1] ? false : true;
 
                             if (isElliptic || arcToCubic) {
 
@@ -967,104 +965,104 @@
 
 
     }
-        /**
-        * based on @cuixiping;
-        * https://stackoverflow.com/questions/9017100/calculate-center-of-svg-arc/12329083#12329083
-        */
-        function svgArcToCenterParam (p0x, p0y, rx, ry, angle, largeArc, sweep, px, py) {
+    /**
+    * based on @cuixiping;
+    * https://stackoverflow.com/questions/9017100/calculate-center-of-svg-arc/12329083#12329083
+    */
+    function svgArcToCenterParam(p0x, p0y, rx, ry, angle, largeArc, sweep, px, py) {
 
-            const radian = (ux, uy, vx, vy) => {
-                let dot = ux * vx + uy * vy;
-                let mod = Math.sqrt((ux * ux + uy * uy) * (vx * vx + vy * vy));
-                let rad = Math.acos(dot / mod);
-                if (ux * vy - uy * vx < 0) {
-                    rad = -rad;
-                }
-                return rad;
-            };
-            // degree to radian
-            let phi = (+angle * Math.PI) / 180;
-            let cx, cy, startAngle, deltaAngle, endAngle;
-            let PI = Math.PI;
-            let PIpx = PI * 2;
-            if (rx < 0) {
-                rx = -rx;
+        const radian = (ux, uy, vx, vy) => {
+            let dot = ux * vx + uy * vy;
+            let mod = Math.sqrt((ux * ux + uy * uy) * (vx * vx + vy * vy));
+            let rad = Math.acos(dot / mod);
+            if (ux * vy - uy * vx < 0) {
+                rad = -rad;
             }
-            if (ry < 0) {
-                ry = -ry;
-            }
-            if (rx == 0 || ry == 0) {
-                // invalid arguments
-                throw Error("rx and ry can not be 0");
-            }
-            let s_phi = Math.sin(phi);
-            let c_phi = Math.cos(phi);
-            let hd_x = (p0x - px) / 2; // half diff of x
-            let hd_y = (p0y - py) / 2; // half diff of y
-            let hs_x = (p0x + px) / 2; // half sum of x
-            let hs_y = (p0y + py) / 2; // half sum of y
-            // F6.5.1
-            let p0x_ = c_phi * hd_x + s_phi * hd_y;
-            let p0y_ = c_phi * hd_y - s_phi * hd_x;
-            // F.6.6 Correction of out-of-range radii
-            //   Step 3: Ensure radii are large enough
-            let lambda = (p0x_ * p0x_) / (rx * rx) + (p0y_ * p0y_) / (ry * ry);
-            if (lambda > 1) {
-                rx = rx * Math.sqrt(lambda);
-                ry = ry * Math.sqrt(lambda);
-            }
-            let rxry = rx * ry;
-            let rxp0y_ = rx * p0y_;
-            let ryp0x_ = ry * p0x_;
-            let sum_of_sq = rxp0y_ * rxp0y_ + ryp0x_ * ryp0x_; // sum of square
-            if (!sum_of_sq) {
-                console.log("start point can not be same as end point");
-            }
-            let coe = Math.sqrt(Math.abs((rxry * rxry - sum_of_sq) / sum_of_sq));
-            if (largeArc == sweep) {
-                coe = -coe;
-            }
-            // F6.5.2
-            let cx_ = (coe * rxp0y_) / ry;
-            let cy_ = (-coe * ryp0x_) / rx;
-            // F6.5.3
-            cx = c_phi * cx_ - s_phi * cy_ + hs_x;
-            cy = s_phi * cx_ + c_phi * cy_ + hs_y;
-            let xcr1 = (p0x_ - cx_) / rx;
-            let xcr2 = (p0x_ + cx_) / rx;
-            let ycr1 = (p0y_ - cy_) / ry;
-            let ycr2 = (p0y_ + cy_) / ry;
-            // F6.5.5
-            startAngle = radian(1, 0, xcr1, ycr1);
-            // F6.5.6
-            deltaAngle = radian(xcr1, ycr1, -xcr2, -ycr2);
-            if (deltaAngle > PIpx) {
-                deltaAngle -= PIpx;
-            }
-            else if (deltaAngle < 0) {
-                deltaAngle += PIpx;
-            }
-            if (sweep == false || sweep == 0) {
-                deltaAngle -= PIpx;
-            }
-            endAngle = startAngle + deltaAngle;
-            if (endAngle > PIpx) {
-                endAngle -= PIpx;
-            }
-            else if (endAngle < 0) {
-                endAngle += PIpx;
-            }
-            let outputObj = {
-                cx: cx,
-                cy: cy,
-                rx: rx,
-                ry: ry,
-                startAngle: startAngle,
-                deltaAngle: deltaAngle,
-                endAngle: endAngle,
-                clockwise: sweep == true || sweep == 1
-            };
-            return outputObj;
+            return rad;
+        };
+        // degree to radian
+        let phi = (+angle * Math.PI) / 180;
+        let cx, cy, startAngle, deltaAngle, endAngle;
+        let PI = Math.PI;
+        let PIpx = PI * 2;
+        if (rx < 0) {
+            rx = -rx;
+        }
+        if (ry < 0) {
+            ry = -ry;
+        }
+        if (rx == 0 || ry == 0) {
+            // invalid arguments
+            throw Error("rx and ry can not be 0");
+        }
+        let s_phi = Math.sin(phi);
+        let c_phi = Math.cos(phi);
+        let hd_x = (p0x - px) / 2; // half diff of x
+        let hd_y = (p0y - py) / 2; // half diff of y
+        let hs_x = (p0x + px) / 2; // half sum of x
+        let hs_y = (p0y + py) / 2; // half sum of y
+        // F6.5.1
+        let p0x_ = c_phi * hd_x + s_phi * hd_y;
+        let p0y_ = c_phi * hd_y - s_phi * hd_x;
+        // F.6.6 Correction of out-of-range radii
+        //   Step 3: Ensure radii are large enough
+        let lambda = (p0x_ * p0x_) / (rx * rx) + (p0y_ * p0y_) / (ry * ry);
+        if (lambda > 1) {
+            rx = rx * Math.sqrt(lambda);
+            ry = ry * Math.sqrt(lambda);
+        }
+        let rxry = rx * ry;
+        let rxp0y_ = rx * p0y_;
+        let ryp0x_ = ry * p0x_;
+        let sum_of_sq = rxp0y_ * rxp0y_ + ryp0x_ * ryp0x_; // sum of square
+        if (!sum_of_sq) {
+            console.log("start point can not be same as end point");
+        }
+        let coe = Math.sqrt(Math.abs((rxry * rxry - sum_of_sq) / sum_of_sq));
+        if (largeArc == sweep) {
+            coe = -coe;
+        }
+        // F6.5.2
+        let cx_ = (coe * rxp0y_) / ry;
+        let cy_ = (-coe * ryp0x_) / rx;
+        // F6.5.3
+        cx = c_phi * cx_ - s_phi * cy_ + hs_x;
+        cy = s_phi * cx_ + c_phi * cy_ + hs_y;
+        let xcr1 = (p0x_ - cx_) / rx;
+        let xcr2 = (p0x_ + cx_) / rx;
+        let ycr1 = (p0y_ - cy_) / ry;
+        let ycr2 = (p0y_ + cy_) / ry;
+        // F6.5.5
+        startAngle = radian(1, 0, xcr1, ycr1);
+        // F6.5.6
+        deltaAngle = radian(xcr1, ycr1, -xcr2, -ycr2);
+        if (deltaAngle > PIpx) {
+            deltaAngle -= PIpx;
+        }
+        else if (deltaAngle < 0) {
+            deltaAngle += PIpx;
+        }
+        if (sweep == false || sweep == 0) {
+            deltaAngle -= PIpx;
+        }
+        endAngle = startAngle + deltaAngle;
+        if (endAngle > PIpx) {
+            endAngle -= PIpx;
+        }
+        else if (endAngle < 0) {
+            endAngle += PIpx;
+        }
+        let outputObj = {
+            cx: cx,
+            cy: cy,
+            rx: rx,
+            ry: ry,
+            startAngle: startAngle,
+            deltaAngle: deltaAngle,
+            endAngle: endAngle,
+            clockwise: sweep == true || sweep == 1
+        };
+        return outputObj;
     }
 
 
@@ -1072,7 +1070,7 @@
     pathDataLength.getPathLengthFromD = getPathLengthFromD;
     pathDataLength.getPathDataLength = getPathDataLength;
     pathDataLength.getLength = getLength;
-    pathDataLength.parsePathDataNormalized= parsepathDataNormalized;
+    pathDataLength.parsePathDataNormalized = parsepathDataNormalized;
     pathDataLength.svgArcToCenterParam = svgArcToCenterParam
 
     return pathDataLength;
@@ -1080,7 +1078,7 @@
 
 
 if (typeof module === 'undefined') {
-    var { getPathLengthLookup, getPathLengthFromD, getPathDataLength, getLength, parsePathDataNormalized, svgArcToCenterParam} = pathDataLength;
+    var { getPathLengthLookup, getPathLengthFromD, getPathDataLength, getLength, parsePathDataNormalized, svgArcToCenterParam } = pathDataLength;
 }
 
 
