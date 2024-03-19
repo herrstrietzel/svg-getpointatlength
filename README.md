@@ -43,6 +43,8 @@ let d = `M3,7
         a5,5 20 01 -10,-10
         Z `
 
+        
+
 // measure path and save metrics in lookup object
 let pathLengthLookup = getPathLengthLookup(d)
 let totalLength = pathLengthLookup.totalLength
