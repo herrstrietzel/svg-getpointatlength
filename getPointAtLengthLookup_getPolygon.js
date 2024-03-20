@@ -91,11 +91,11 @@ function polygonFromPathData(d, options = {}) {
             polypoints.push(pt);
           }
         }
-        //(p0.x !== p.x || p0.y !== p.y && (M.x !== p.x || M.y !== p.y) 
-          if (p0.x !== p.x || p0.y !== p.y && (M.x !== p.x || M.y !== p.y) ) {
-            //console.log('not same', i, p0, p, M);
-            polypoints.push(p);
-          }
+
+        // skip if end point equals starting point
+        if ((p0.x !== p.x || p0.y !== p.y) && (M.x !== p.x || M.y !== p.y)) {
+          polypoints.push(p);
+        }
         
         lastLength += segL;
       }
