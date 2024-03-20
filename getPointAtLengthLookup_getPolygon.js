@@ -1,11 +1,20 @@
 /**
-* calculate polygon from
-* pathdata
-*/
+ * calculate polygon from
+ * pathdata
+ */
 
 function polygonFromPathData(d, options = {}) {
   // accepts d string or pathdata array
-  let pathData = Array.isArray(d) ? d : parsePathDataNormalized(d);
+  let isPathData = Array.isArray(d);
+  let pathData = isPathData ? d : parsePathDataNormalized(d);
+  let commandTokens = isPathData
+    ? pathData
+        .map((com) => {
+          return com.type;
+        })
+        .join("")
+        .toLowerCase()
+    : d;
   let lengthLookup = getPathLengthLookup(pathData);
   let totalLength = lengthLookup.totalLength;
 
@@ -73,28 +82,21 @@ function polygonFromPathData(d, options = {}) {
         let p = segPoints[segPoints.length - 1];
         let type = seg.type.toLowerCase();
 
-        // linetos
-        if (type === "l") {
-          // is Z/closepath: add previous end point
-          if (i === segments.length - 1) {
-            //console.log('last');
-            polypoints.push(p0);
-          }
-          if (p0.x !== p.x || p0.y !== p.y) {
-            //console.log('not same', i, p0, p);
-            polypoints.push(p);
-          }
-        }
-
         // curves
-        else {
+        if (type !== "l")  {
           // points in segment
-          for (let s = 0; s < segSplits; s++) {
+          for (let s = 1; s < segSplits; s++) {
             len = lastLength + (segL / segSplits) * s;
             let pt = lengthLookup.getPointAtLength(len);
             polypoints.push(pt);
           }
         }
+        //(p0.x !== p.x || p0.y !== p.y && (M.x !== p.x || M.y !== p.y) 
+          if (p0.x !== p.x || p0.y !== p.y && (M.x !== p.x || M.y !== p.y) ) {
+            //console.log('not same', i, p0, p, M);
+            polypoints.push(p);
+          }
+        
         lastLength += segL;
       }
     }
@@ -173,7 +175,8 @@ function polygonFromPathData(d, options = {}) {
   let pathVertices = getPathDataVertices(pathData);
 
   // 1. any beziers or arc commands?
-  let isPolygon = /[csqta]/gi.test(d) ? false : true;
+  let isPolygon = /[csqta]/gi.test(commandTokens) ? false : true
+
   if (isPolygon && retainPoly) {
     //console.log('path is polygon');
     polypoints = pathVertices;
@@ -222,9 +225,7 @@ function polygonFromPathData(d, options = {}) {
       lengthDiff = Math.abs(totalLength - polyLength);
       checks++;
     }
-    //console.log(checks, lengthDiff);
   }
 
-  //console.log(polypoints);
   return polypoints;
 }
