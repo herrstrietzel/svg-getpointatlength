@@ -199,7 +199,7 @@
     function getPathLengthLookup(d, lg = 0, onlyLength = false) {
 
         // get pathdata
-        let pathData = Array.isArray(d) ? d : parsepathDataNormalized(d);
+        let pathData = Array.isArray(d) ? d : parsePathDataNormalized(d);
         let tDivisions = 36;
         let pathLength = 0;
         let M = pathData[0];
@@ -376,7 +376,7 @@
 
 
     function getPathLengthFromD(d, lg = 0) {
-        let pathData = parsepathDataNormalized(d);
+        let pathData = parsePathDataNormalized(d);
         return getPathDataLength(pathData, lg)
     }
 
@@ -538,7 +538,7 @@
      * the core function to parse the pathData array from a d string
      **/
 
-    function parsepathDataNormalized(d, options = {}) {
+    function parsePathDataNormalized(d, options = {}) {
 
         d = d
             // remove new lines, tabs an comma with whitespace
@@ -1070,7 +1070,7 @@
     pathDataLength.getPathLengthFromD = getPathLengthFromD;
     pathDataLength.getPathDataLength = getPathDataLength;
     pathDataLength.getLength = getLength;
-    pathDataLength.parsePathDataNormalized = parsepathDataNormalized;
+    pathDataLength.parsePathDataNormalized = parsePathDataNormalized;
     pathDataLength.svgArcToCenterParam = svgArcToCenterParam
 
     return pathDataLength;
