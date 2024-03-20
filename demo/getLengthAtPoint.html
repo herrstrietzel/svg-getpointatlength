@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+
+    <style>
+        svg {
+            overflow: visible;
+        }
+    </style>
+</head>
+
+<body>
+
+    <svg width="543" height="7907" viewBox="0 0 543 7907">
+        <defs>
+            <path fill="none" id="pathTmpl" d="M125.5 1v0c0 78.2 63.4 141.5 141.5 141.5h126.9c25.9 0 51.4 6.9 73.9 19.8v0c45.9 26.5 74.2 75.4 74.2 128.4v22.9l-2.2 20.1c-5.7 53.2-40.2 99-89.8 119.1l-25.3 10.2c-5.1 2.1-9.6 5.3-13.1 9.5v0c-5.2 6.1-8.1 13.9-8.1 22v9.7v0c0 12.8-10.4 23.3-23.3 23.3h-368.7c-5.8 0-10.5 4.7-10.5 10.5v0v405.5v0c0 5.8 4.7 10.5 10.5 10.5h378v0c7.7 0 14 6.3 14 14v384.3v762.9c0 34.2-27.8 62-62 62v0c-34.2 0-62 27.7-62 62v180.8c0 7.2-5.8 13-13 13v0h-249.5c-6.6 0-12 5.4-12 12v0v400v0c0 8.8 7.2 16 16 16h245.5v0c7.2 0 13 5.8 13 13v1129.6c0 53.9-43.8 97.7-97.7 97.7v0c-54 0-97.8 43.8-97.8 97.8v133.4v0c0 3.3 2.7 6 6 6h92.5v0c3.3 0 6 2.7 6 6v417.5c0 2.8-2.2 5-5 5v0h-92.5c-3.9 0-7 3.1-7 7v0v331.7c0 77.8 63.1 141 141 141h36.2c57.9 0 104.8 46.9 104.8 104.8v0v104.5v0c0 7.5-6 13.5-13.5 13.5h-240c-8.6 0-15.5 6.9-15.5 15.5v0v376.5v0c0 9.9 8.1 18 18 18h233v0c9.9 0 18 8.1 18 18v549.5c0 9.9-8.1 18-18 18v0h-237c-6.9 0-12.5 5.6-12.5 12.5v0v381v0c0 9.1 7.4 16.5 16.5 16.5h233v0c9.9 0 18 8.1 18 18v681.9c0 53-43 96-96 96v0c-53 0-96 43-96 96v139.6  
+                " />
+            </path>
+        </defs>
+        <use href="#pathTmpl" stroke-width="0.25%" stroke-dasharray="0" stroke="#ccc"></use>
+        <use id="stroke" href="#pathTmpl" stroke-dasharray="0 100000" stroke-width="0.25%" stroke="red"></use>
+
+        <circle id="circle" cy="0" cx="0" r="0.5%" fill="green" fill-opacity="0.5"></circle>
+    </svg>
+
+<!-- 
+
+    
+-->
+<script src="../getPointAtLengthLookup.js"></script>
+
+
+    <script>
+
+
+        const svg = document.querySelector("svg");
+        const pathTmpl = document.getElementById("pathTmpl");
+        const strokePath = document.getElementById("stroke");
+
+        // steps for pathlength lookup
+        let precision = 5000;
+        let tolerance = 10;
+
+        /*
+        // create length lookup
+        let t0 = performance.now()
+        let lengthLookup = getLengthLookup(pathTmpl, precision);
+        console.log('lengthLookup', lengthLookup)
+        let t1 = performance.now()
+        let t2 = t1 - t0
+        console.log(t2, 'ms')
+        */
+
+
+        // get pathLength alternative
+        t0 = performance.now()
+
+        // lookup for path length calculations
+        let lengthLookup = getPathLengthLookup(pathTmpl.getAttribute('d'))
+
+        // lookup for point at length calculations
+        let pointAtLengthLookup = getPointAtLengthLookup(lengthLookup, precision)
+
+        /*
+        console.log(pointAtLengthLookup);
+        t1 = performance.now()
+        t2 = t1 - t0
+        console.log(t2, 'ms')
+        */
+
+
+        document.addEventListener("click", (e) => {
+            // cursor point
+            let pt = new DOMPoint(e.clientX, e.clientY);
+
+            // update cursor
+            let ptSvg = screenToSVG(svg, pt);
+            circle.setAttribute("cx", ptSvg.x);
+            circle.setAttribute("cy", ptSvg.y);
+
+            // update length
+            let lengthAtPoint = getLengthAtPoint(pointAtLengthLookup, ptSvg);
+
+            // demo illustration: change dasharray
+            if (lengthAtPoint) {
+                strokePath.setAttribute(
+                    "stroke-dasharray",
+                    `${lengthAtPoint} ${lengthLookup.totalLength}`
+                );
+            }
+        });
+
+
+        function getLengthAtPoint(lengthLookup, pt) {
+            let lengthAtPoint = 0;
+            let { lengthArr, yArr, xArr, pathLength } = lengthLookup;
+
+            //console.log(lengthArr, yArr, xArr, pathLength);
+
+            // find length
+            let found = false;
+
+            for (let i = 0; i < yArr.length && !found; i++) {
+                let x = xArr[i];
+                let y = yArr[i];
+
+                // compare diviations
+                let diffX = Math.abs(pt.x - x);
+                let diffY = Math.abs(pt.y - y);
+                let diffMin = Math.min(diffX, diffY)
+                let diffMax = Math.max(diffX, diffY)
+                let diffTolerance = (tolerance - diffMax);
+
+
+                // simple average diff
+                let diff = (diffX + diffY) / 2;
+
+                // add tolerance threshold
+                let maxDiffRat = 1.5
+                if (
+                    diff <= tolerance ||
+                    (diffX <= tolerance && diffY <= tolerance * maxDiffRat) ||
+                    (diffY <= tolerance && diffX <= tolerance * maxDiffRat)
+                ) {
+
+                    // nearest length with close x/y coordinates
+                    let length = lengthArr[i];
+
+                    // interpolate length based on length deviation
+                    let lengthPrev = lengthArr[i - 1] ? lengthArr[i - 1] : length;
+                    let ratio = (1 / lengthArr[i]) * lengthPrev;
+                    console.log(ratio, diff, diffMin, diffTolerance);
+
+
+                    lengthAtPoint = (lengthArr[i] * ratio) + (tolerance * maxDiffRat);
+                    lengthAtPoint = (lengthArr[i]) + (tolerance * maxDiffRat);
+                    //lengthAtPoint = (lengthArr[i]) + (tolerance/2);
+
+                    lengthAtPoint = (lengthArr[i]) + (diffMax/2) + diffTolerance/2;
+                    lengthAtPoint = (lengthArr[i]) + (diffMax)
+
+                    // stop loop
+                    found = true;
+                }
+            }
+            return lengthAtPoint;
+        }
+
+
+
+        /**
+        * create lookup containing lengths and 
+        * coordinates at equidistant
+        */
+        function getPointAtLengthLookup(lengthLookup, precision = 100) {
+            //create pathlength lookup
+            let pathLength = lengthLookup.totalLength;
+            //console.log(pathLength);
+            let lengthAtPointLookup = {
+                yArr: [],
+                xArr: [],
+                lengthArr: [],
+                pathLength: pathLength
+            };
+
+            // sample point to calculate Y at pathLengths
+            let step = Math.ceil(pathLength / precision);
+
+            for (let l = 0; l < pathLength; l += step) {
+                //let pt = SVGToScreen(svg, path.getPointAtLength(l));
+                let pt = lengthLookup.getPointAtLength(l);
+                lengthAtPointLookup.xArr.push(pt.x);
+                lengthAtPointLookup.yArr.push(pt.y);
+                lengthAtPointLookup.lengthArr.push(l);
+            }
+            return lengthAtPointLookup;
+        }
+
+        /** Based on @Paul LeBeau's answer
+         * https://stackoverflow.com/questions/48343436/how-to-convert-svg-element-coordinates-to-screen-coordinates#48354404
+         */
+        function SVGToScreen(svg, pt) {
+            let p = new DOMPoint(pt.x, pt.y);
+            p = p.matrixTransform(svg.getScreenCTM());
+            return p;
+        }
+
+        function screenToSVG(svg, pt) {
+            let p = new DOMPoint(pt.x, pt.y);
+            return p.matrixTransform(svg.getScreenCTM().inverse());
+        }
+
+
+
+
+
+
+        
+
+    </script>
+
+
+
+</body>
+
+</html>

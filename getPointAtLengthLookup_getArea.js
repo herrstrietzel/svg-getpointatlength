@@ -84,10 +84,11 @@ function getPathArea(pathData) {
         if (counterShapes.indexOf(d) !== -1) {
             multiplier = -1;
         }
+
+        console.log(counterShapes, areaPoly, bezierArea);
         //values have the same sign - subtract polygon area
         if (
-            (areaPoly < 0 && bezierArea < 0) ||
-            (areaPoly > 0 && bezierArea > 0)
+            (areaPoly < 0 && bezierArea < 0) 
         ) {
             pathArea = (Math.abs(bezierArea) - Math.abs(areaPoly)) * multiplier;
         } else {
@@ -95,6 +96,8 @@ function getPathArea(pathData) {
         }
 
         totalArea += pathArea;
+
+        console.log(pathArea);
     })
 
     return totalArea;
@@ -511,3 +514,30 @@ function quadraticBezierExtremeT(p0, cp1, p) {
     }
     return extemeT
 }
+
+
+
+    /**
+     * calculate single points on segments
+     */
+    function getPointAtCubicSegmentT(p0, cp1, cp2, p, t = 0.5) {
+        let t1 = 1 - t;
+        return {
+            x: t1 ** 3 * p0.x +
+                3 * t1 ** 2 * t * cp1.x +
+                3 * t1 * t ** 2 * cp2.x +
+                t ** 3 * p.x,
+            y: t1 ** 3 * p0.y +
+                3 * t1 ** 2 * t * cp1.y +
+                3 * t1 * t ** 2 * cp2.y +
+                t ** 3 * p.y
+        };
+    }
+
+    function getPointAtQuadraticSegmentT(p0, cp1, p, t = 0.5) {
+        let t1 = 1 - t;
+        return {
+            x: t1 * t1 * p0.x + 2 * t1 * t * cp1.x + t ** 2 * p.x,
+            y: t1 * t1 * p0.y + 2 * t1 * t * cp1.y + t ** 2 * p.y
+        };
+    }
