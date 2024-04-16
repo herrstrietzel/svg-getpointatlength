@@ -6,7 +6,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>performance test</title>
 
-
     <style>
         body {
             font-family: sans-serif;
@@ -19,8 +18,6 @@
             padding: 5%;
         }
 
-
-
         .grd {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -29,7 +26,6 @@
             height: 95vh;
             */
         }
-
 
         .col {
             height: 100%;
@@ -47,29 +43,62 @@
         textarea {
             width: 100%;
             display: block;
-            min-height: 10em;
+            min-height: 20em;
             height: 50%;
-            flex: 1 1 auto;
-
+            resize: vertical;
         }
 
-
         select,
-        input[type="text"],
-        input[type="range"] {
+        input[type=text],
+        input[type=range] {
             width: 100%;
-            display: block
+            display: block;
         }
 
         #valLength {
             display: block;
-
         }
 
         path {
             fill: none;
             stroke-width: 1%;
             stroke: #ccc;
+        }
+
+        .green::marker {
+            color: green;
+        }
+
+        .white::marker {
+            color: #ccc;
+        }
+
+        .orange::marker {
+            color: orange;
+        }
+
+        .purple::marker {
+            color: purple;
+        }
+
+        .pointsAtLength {
+            display: none
+        }
+
+        .showNative .native {
+            display: block;
+        }
+
+        .showLookup .lookup {
+            display: block;
+        }
+
+        .showProperties .properties {
+            display: block;
+        }
+
+        .showCanvas .canvas {
+            display: block;
         }
     </style>
 </head>
@@ -78,12 +107,33 @@
 
     <div class="grd">
         <div class="col">
-            <h1>Get point at length – performance</h1>
+            <h1>Get point at length – performance/accuracy</h1>
+            <ul>
+                <li class="green"><label><input class="inputShowResults" id="showNative" type="checkbox" checked> green:
+                        native pointAtlength()</label></li>
+                <li class="white"><label><input class="inputShowResults" id="showLookup" type="checkbox" checked>white:
+                        pathlengthLookup </label></li>
+                <li class="purple"><label><input class="inputShowResults" id="showProperties" type="checkbox">purple:
+                        svg-path-properties</label></li>
+                <li class="orange"><label><input class="inputShowResults" id="showCanvas" type="checkbox">orange:
+                        path2D-inspection</label></li>
+            </ul>
 
             <!-- samples -->
+            <h3>Load svg sample</h3>
             <p>
                 <select id="inputExample" class="inputs">
                 </select>
+            </p>
+
+            <h3>Precision: low | medium | high</h3>
+            <p>
+                <select id="inputPrecision" class="inputs">
+                    <option value="low">low</option>
+                    <option value="medium" selected>medium</option>
+                    <option value="high">high</option>
+                </select>
+
             </p>
 
             <h3>Vertices</h3>
@@ -97,14 +147,15 @@
         <div class="col">
             <svg id="svg" viewBox="0 0 100 100">
                 <path class="preview" d="  " />
-                <g id="pts1"></g>
-                <g id="pts2"></g>
-                <g id="pts3"></g>
-                <g id="pts4"></g>
+                <g class="pointsAtLength native" id="pts1"></g>
+                <g class="pointsAtLength lookup" id="pts2"></g>
+                <g class="pointsAtLength properties" id="pts3"></g>
+                <g class="pointsAtLength canvas" id="pts4"></g>
 
             </svg>
         </div>
     </div>
+
 
 
     <script src="https://cdn.jsdelivr.net/gh/Kaiido/path2D-inspection@master/build/path2D-inspection.min.js"></script>
@@ -115,165 +166,18 @@
 
 
     <script>
-
-
-        //test arc param
-        /*
-         M 10001 1 10001 10001 20001 10001
-        A10000 10000 0 1 1 10001 1
-
-
-M 7071.0678 7071.0678 L 0 14142.1356 L 7071.0678  21213.2034 A 10000 10000 0 1 1 7071.0678 7071.0678
-
-
-21213.2034, 10000, 10000, 45, 1, 1, 7071.0678, 7071.0678
-
-        */
-
-
-
-
-        perfStart()
-        let par = svgArcToCenterParam(7071.0678, 21213.2034, -10000, 10000, 0, 1, 1, 7071.0678, 7071.0678)
-        console.dir(JSON.stringify(par, null, ' '));
-        perfEnd()
-
-
-        /*
-        perfStart()
-        let par2 = svgArcToCenterParam2(7071.0678, 21213.2034, 10000, 10000, 45, 1, 1, 7071.0678, 7071.0678)
-        console.dir(JSON.stringify(par2, null, ' '));
-        perfEnd()
-        */
-
-
-        /**
-           * based on @cuixiping;
-           * https://stackoverflow.com/questions/9017100/calculate-center-of-svg-arc/12329083#12329083
-           */
-        function svgArcToCenterParam2(p0x, p0y, rx, ry, angle, largeArc, sweep, px, py) {
-
-
-            const radian = (ux, uy, vx, vy) => {
-                let dot = ux * vx + uy * vy;
-                let mod = Math.sqrt((ux * ux + uy * uy) * (vx * vx + vy * vy));
-                let rad = Math.acos(dot / mod);
-                if (ux * vy - uy * vx < 0) {
-                    rad = -rad;
-                }
-                return rad;
-            };
-
-            // degree to radian
-            let phi = rx === ry ? 0 : (+angle * Math.PI) / 180;
-
-            let cx, cy, startAngle, deltaAngle, endAngle;
-            let PI = Math.PI;
-            let PIpx = PI * 2;
-            if (rx < 0) {
-                rx = -rx;
-            }
-            if (ry < 0) {
-                ry = -ry;
-            }
-            if (rx == 0 || ry == 0) {
-                // invalid arguments
-                throw Error("rx and ry can not be 0");
-            }
-
-            let s_phi = phi === 0 ? 0 : Math.sin(phi);
-            let c_phi = phi === 0 ? 1 : Math.cos(phi);
-
-            let hd_x = (p0x - px) / 2; // half diff of x
-            let hd_y = (p0y - py) / 2; // half diff of y
-            let hs_x = (p0x + px) / 2; // half sum of x
-            let hs_y = (p0y + py) / 2; // half sum of y
-
-            // F6.5.1
-            let p0x_ = c_phi * hd_x + s_phi * hd_y;
-            let p0y_ = c_phi * hd_y - s_phi * hd_x;
-
-            // F.6.6 Correction of out-of-range radii
-            //   Step 3: Ensure radii are large enough
-            let lambda = (p0x_ * p0x_) / (rx * rx) + (p0y_ * p0y_) / (ry * ry);
-            if (lambda > 1) {
-                rx = rx * Math.sqrt(lambda);
-                ry = ry * Math.sqrt(lambda);
-            }
-            let rxry = rx * ry;
-            let rxp0y_ = rx * p0y_;
-            let ryp0x_ = ry * p0x_;
-            let sum_of_sq = rxp0y_ * rxp0y_ + ryp0x_ * ryp0x_; // sum of square
-            if (!sum_of_sq) {
-                throw Error("start point can not be same as end point");
-            }
-            let coe = Math.sqrt(Math.abs((rxry * rxry - sum_of_sq) / sum_of_sq));
-            if (largeArc == sweep) {
-                coe = -coe;
-            }
-            // F6.5.2
-            let cx_ = (coe * rxp0y_) / ry;
-            let cy_ = (-coe * ryp0x_) / rx;
-
-            // F6.5.3
-            cx = c_phi * cx_ - s_phi * cy_ + hs_x;
-            cy = s_phi * cx_ + c_phi * cy_ + hs_y;
-            let xcr1 = (p0x_ - cx_) / rx;
-            let xcr2 = (p0x_ + cx_) / rx;
-            let ycr1 = (p0y_ - cy_) / ry;
-            let ycr2 = (p0y_ + cy_) / ry;
-
-            // F6.5.5
-            startAngle = radian(1, 0, xcr1, ycr1);
-
-            // F6.5.6
-            deltaAngle = radian(xcr1, ycr1, -xcr2, -ycr2);
-
-            if (deltaAngle > PIpx) {
-                deltaAngle -= PIpx;
-            } else if (deltaAngle < 0) {
-                deltaAngle += PIpx;
-            }
-            if (sweep == false || sweep == 0) {
-                deltaAngle -= PIpx;
-            }
-            endAngle = startAngle + deltaAngle;
-            if (endAngle > PIpx) {
-                endAngle -= PIpx;
-            } else if (endAngle < 0) {
-                endAngle += PIpx;
-            }
-            let toDegFactor = 180 / PI;
-            let outputObj = {
-                cx: cx,
-                cy: cy,
-                rx: rx,
-                ry: ry,
-                startAngle_deg: startAngle * toDegFactor,
-                startAngle: startAngle,
-                deltaAngle_deg: deltaAngle * toDegFactor,
-                deltaAngle: deltaAngle,
-                endAngle_deg: endAngle * toDegFactor,
-                endAngle: endAngle,
-                clockwise: sweep == true || sweep == 1
-            };
-            return outputObj;
-        }
-
-
         // init
-        let path = document.querySelector('path')
-        let svg = path.closest('svg')
+        let path = document.querySelector("path");
+        let svg = path.closest("svg");
         let exactLength = 0;
-
 
         /**
          * load samples
          */
 
-        // load examples            
+        // load examples
         for (let i = 0; i < samples.length; i++) {
-            let sample = samples[i]
+            let sample = samples[i];
             let key = Object.keys(sample)[0];
 
             let option = document.createElement("option");
@@ -282,148 +186,171 @@ M 7071.0678 7071.0678 L 0 14142.1356 L 7071.0678  21213.2034 A 10000 10000 0 1 1
             inputExample.append(option);
         }
 
-        let first = inputExample.options[0];
-        exactLength = samples[0].res ? samples[0].res : 0;
-        console.log('exactLength', exactLength);
+        let firstInd = 16
+        firstInd = 7
+        firstInd = 16
+        let first = inputExample.options[firstInd];
+        exactLength = samples[firstInd].res ? samples[firstInd].res : 0;
 
         first.selected = true;
         svgInput.value = first.value;
-        let d = svgInput.value
+        let d = svgInput.value;
         let vertices = +inputVertices.value;
-        path.setAttribute('d', d)
-        updateSVG()
+        path.setAttribute("d", d);
 
-        svgInput.addEventListener('input', e => {
-            updateSVG();
+        let inputsShowResults = document.querySelectorAll('.inputShowResults');
+        inputsShowResults.forEach(inp => {
+            inp.addEventListener('click', e => {
+                checkLibraryRendering()
+            })
         })
-        inputVertices.addEventListener('input', e => {
+
+        updateSVG();
+
+
+        svgInput.addEventListener("input", (e) => {
             updateSVG();
-        })
+        });
+
+        inputPrecision.addEventListener("input", (e) => {
+            updateSVG();
+        });
+
+        inputVertices.addEventListener("input", (e) => {
+            updateSVG();
+        });
+
 
 
         /**
          * load samples
-        */
+         */
         inputExample.addEventListener("input", (e) => {
             // get svg markup
             let example = inputExample.value;
             svgInput.value = example;
 
             let index = e.target.options.selectedIndex;
-
             d = example;
-            exactLength = samples[index].res ? samples[index].res : ' ';
-            console.log(samples[index].res);
-            updateSVG()
+            exactLength = samples[index].res ? samples[index].res : 0;
+            updateSVG();
         });
 
-
         function updateSVG() {
-            d = svgInput.value
-            path.setAttribute('d', d)
+            d = svgInput.value;
+            path.setAttribute("d", d);
 
             // adjust viewBox
-            let vB = path.getBBox()
-            svg.setAttribute('viewBox', [vB.x, vB.y, vB.width, vB.height].join(' '))
-            console.log('new length', exactLength);
-
+            let vB = path.getBBox();
+            svg.setAttribute("viewBox", [vB.x, vB.y, vB.width, vB.height].join(" "));
             //updateLength()
-            testPerf()
-
-
+            testPerf();
+            checkLibraryRendering()
         }
 
+        function checkLibraryRendering() {
+            inputsShowResults.forEach(inp => {
+                if (inp.checked) {
+                    document.body.classList.add(inp.id)
+                } else {
+                    document.body.classList.remove(inp.id)
+                }
+            })
+        }
 
         function testPerf() {
             //let d = path.getAttribute('d')
             vertices = +inputVertices.value;
             let t0, t1, t2;
 
+            let precision = inputPrecision.value;
+            let onlyLength = false;
+
             let timings = {
                 native: [],
                 lookup: [],
                 properties: [],
                 canvas: []
-            }
+            };
 
             /**
              * 1. native
              */
             t0 = performance.now();
-            let pathLengthN = path.getTotalLength()
-            t1 = performance.now()
+            let pathLengthN = path.getTotalLength();
+            t1 = performance.now();
             t2 = t1 - t0;
+            timings.native = { length: pathLengthN, time: [t2] };
 
             t0 = performance.now();
-            let ptsN = []
+            let ptsN = [];
             for (let i = 0; i < vertices; i++) {
-                let pt = path.getPointAtLength(pathLengthN / vertices * i)
-                ptsN.push(pt)
+                let pt = path.getPointAtLength((pathLengthN / vertices) * i);
+                ptsN.push(pt);
             }
-            t1 = performance.now()
+            t1 = performance.now();
             t2 = t1 - t0;
-            timings.native = { length: pathLengthN, time: t2 + 'ms' }
+            timings.native.time.push(t2);
             if (exactLength) {
-                timings.native.exact = exactLength
-                timings.native.diff = Math.abs(pathLengthN - exactLength)
+                timings.native.exact = exactLength;
+                timings.native.diff = Math.abs(pathLengthN - exactLength);
             }
-
 
             /**
              * 2. path length lookup
              */
             t0 = performance.now();
-            let pathLengthLookup = getPathLengthLookup(d)
-            let totalLengthL = pathLengthLookup.totalLength
+            let pathLengthLookup = getPathLengthLookup(d, precision, onlyLength);
+            let totalLengthL = pathLengthLookup.totalLength;
 
-            t1 = performance.now()
+            t1 = performance.now();
             t2 = t1 - t0;
+            timings.lookup = { length: totalLengthL, time: [t2] };
+
+
             t0 = performance.now();
-            let ptsL = []
+            let ptsL = [];
             for (let i = 0; i < vertices; i++) {
-                let pt = pathLengthLookup.getPointAtLength(totalLengthL / vertices * i)
-                ptsL.push(pt)
+                let pt = pathLengthLookup.getPointAtLength((totalLengthL / vertices) * i);
+                ptsL.push(pt);
             }
-            t1 = performance.now()
+            t1 = performance.now();
             t2 = t1 - t0;
-            timings.lookup = { length: totalLengthL, time: t2 + ' ms' }
+            timings.lookup.time.push(t2);
+
             if (exactLength) {
-                timings.lookup.exact = exactLength
-                timings.lookup.diff = Math.abs(totalLengthL - exactLength)
+                timings.lookup.exact = exactLength;
+                timings.lookup.diff = Math.abs(totalLengthL - exactLength);
             }
-
-
 
             /**
              * svg-path-properties
              */
             t0 = performance.now();
-            let ptsP = []
+            let ptsP = [];
             try {
                 let properties = new svgPathProperties.svgPathProperties(d);
                 let totalLengthProps = properties.getTotalLength();
-                t1 = performance.now()
+                t1 = performance.now();
                 t2 = t1 - t0;
+                timings.properties = { length: totalLengthProps, time: [t2] };
+
                 t0 = performance.now();
                 for (let i = 0; i < vertices; i++) {
-                    let pt = properties.getPointAtLength(totalLengthProps / vertices * i)
-                    ptsP.push(pt)
+                    let pt = properties.getPointAtLength((totalLengthProps / vertices) * i);
+                    ptsP.push(pt);
                 }
-                t1 = performance.now()
+                t1 = performance.now();
                 t2 = t1 - t0;
-                timings.properties = { length: totalLengthProps, exact: exactLength, time: t2 + ' ms' }
+
+                timings.properties.time.push(t2);
                 if (exactLength) {
-                    timings.properties.exact = exactLength
-                    timings.properties.diff = Math.abs(totalLengthProps - exactLength)
+                    timings.properties.exact = exactLength;
+                    timings.properties.diff = Math.abs(totalLengthProps - exactLength);
                 }
-
-
-
+            } catch {
+                timings.properties.push("couldn't parse path");
             }
-            catch {
-                timings.properties.push("couldn't parse path")
-            }
-
 
             /**
              * Path2D Inspection
@@ -431,92 +358,62 @@ M 7071.0678 7071.0678 L 0 14142.1356 L 7071.0678  21213.2034 A 10000 10000 0 1 1
 
             t0 = performance.now();
             let path2D = new Path2D(d);
-            let pdC = path2D.getPathData()
+            let pdC = path2D.getPathData();
             let pathLength2D = path2D.getTotalLength();
 
-            t1 = performance.now()
+            t1 = performance.now();
             t2 = t1 - t0;
-            timings.canvas.push(t2, pathLength2D)
+            timings.canvas = { length: pathLength2D, time: [t2] };
 
             t0 = performance.now();
-            let pts2d = []
+            let pts2d = [];
             for (let i = 0; i < vertices; i++) {
-                let pt = path2D.getPointAtLength(pathLength2D / vertices * i)
-                pts2d.push(pt)
+                let pt = path2D.getPointAtLength((pathLength2D / vertices) * i);
+                pts2d.push(pt);
             }
-            t1 = performance.now()
+            t1 = performance.now();
             t2 = t1 - t0;
-            //timings.canvas.push(t2)
-            timings.canvas = { length: pathLength2D, exact: exactLength, time: t2 + ' ms' }
 
+            timings.canvas.time.push(t2);
             if (exactLength) {
-                timings.properties.exact = exactLength
-                timings.properties.diff = Math.abs(pathLength2D - exactLength)
+                timings.canvas.exact = exactLength;
+                timings.canvas.diff = Math.abs(pathLength2D - exactLength);
             }
-
 
             /**
              * render points
              */
             // native
-            let testPts = ''
-            ptsN.forEach(pt => {
-                testPts += `<circle  cx="${pt.x}" cy="${pt.y}" r="1.5%" fill="green"/>`
-            })
-            pts1.innerHTML = testPts
-
-
+            let testPts = "";
+            ptsN.forEach((pt) => {
+                testPts += `<circle  cx="${pt.x}" cy="${pt.y}" r="1.5%" fill="green"/>`;
+            });
+            pts1.innerHTML = testPts;
 
             // lookup
-            let testPtsL = ''
-            ptsL.forEach(pt => {
-                testPtsL += `<circle  cx="${pt.x}" cy="${pt.y}" r="1.1%" fill="#fff"/>`
-            })
-            pts2.innerHTML = testPtsL
-
-
+            let testPtsL = "";
+            ptsL.forEach((pt) => {
+                testPtsL += `<circle  cx="${pt.x}" cy="${pt.y}" r="1.1%" fill="#fff"/>`;
+            });
+            pts2.innerHTML = testPtsL;
 
             // path properties
-            let testPtsP = ''
-            ptsP.forEach(pt => {
-                testPtsP += `<circle  cx="${pt.x}" cy="${pt.y}" r="0.75%" fill="purple"/>`
-            })
-            pts3.innerHTML = testPtsP
-
+            let testPtsP = "";
+            ptsP.forEach((pt) => {
+                testPtsP += `<circle  cx="${pt.x}" cy="${pt.y}" r="0.75%" fill="purple"/>`;
+            });
+            pts3.innerHTML = testPtsP;
 
             // canvas 2d
-            let testPtsC = ''
-            pts2d.forEach(pt => {
-                testPtsC += `<circle  cx="${pt.x}" cy="${pt.y}" r="0.5%" fill="orange"/>`
-            })
-            pts4.innerHTML = testPtsC
-
+            let testPtsC = "";
+            pts2d.forEach((pt) => {
+                testPtsC += `<circle  cx="${pt.x}" cy="${pt.y}" r="0.5%" fill="orange"/>`;
+            });
+            pts4.innerHTML = testPtsC;
 
             // summary
-            report.value = JSON.stringify(timings, null, ' ')
-
-
+            report.value = JSON.stringify(timings, null, " ");
         }
-
-
-
-
-        /**
-         * simple performance test
-         */
-
-        function perfStart() {
-            t0 = performance.now();
-        }
-
-        function perfEnd(text = '') {
-            t1 = performance.now();
-            total = t1 - t0;
-            console.log(`excecution time ${text}:  ${total} ms`);
-            return total;
-        }
-
-
 
     </script>
 
