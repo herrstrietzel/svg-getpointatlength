@@ -33,7 +33,7 @@ or minified version (~ 9KB/4KB gzipped)
 <script src="https://cdn.jsdelivr.net/npm/svg-getpointatlength@latest/getPointAtLengthLookup.min.js"></script>
 ```
 
-**Example: calculate pathDength from pathData**  
+**Example: calculate pathLength from pathData**  
 
 ```
 
