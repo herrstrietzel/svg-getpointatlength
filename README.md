@@ -33,7 +33,7 @@ or minified version (~ 9KB/4KB gzipped)
 <script src="https://cdn.jsdelivr.net/npm/svg-getpointatlength@latest/getPointAtLengthLookup.min.js"></script>
 ```
 
-**Example: calculate pathDength from pathData**  
+**Example: calculate path length from pathData**  
 
 ```
 
@@ -74,7 +74,7 @@ console.log(pt)
 If you only need to retrieve the total lenght of a path you can use the simplified helper  `getPathLengthFromD()`
 
 ```
-// only length – slightly faster
+// only length – slightly faster as we don't calculate intermediate lengths
 let length = getPathLengthFromD(d)
 console.log(length)
 ```
@@ -120,6 +120,35 @@ console.log(totalLength)
 let pt = pathLengthLookup.getPointAtLength(totalLength/2)
 console.log(pt)
 ```
+
+## Methods
+`getPathLengthLookup(d)` returns a lookup objects including reusable data about ech path segment as well as the total length.  
+
+```
+{
+  "totalLength": path total length,
+  "segments": [
+   {
+    //lengths calculated between t=0  to t=1 in 36 steps
+    "lengths": [ length array ],
+    "points": [ control point array ],
+    "index": segment index,
+    "total": segment length,
+    "type": segment command type (c, q, l, a etc.),
+   },
+   //... subsequent segment info
+  ]
+}
+```
+
+`lookup.pathLengthLookup.getPointAtLength(length)` returns an object like this 
+
+```
+{x: 10, y:20, index:segmentIndex, t:tValue}
+```
+
+So you also have info about the current segment the length is in as well as the `t` value used to interpolate the point.  
+
 
 ## How it works
 **Save path/segment metrics as a reusable lookup for further calculations**  

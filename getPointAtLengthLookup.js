@@ -965,6 +965,8 @@
 
 
     }
+
+
     /**
     * based on @cuixiping;
     * https://stackoverflow.com/questions/9017100/calculate-center-of-svg-arc/12329083#12329083
@@ -980,51 +982,62 @@
             }
             return rad;
         };
-        // degree to radian
-        let phi = (+angle * Math.PI) / 180;
+
+        // degree to radian: if rx===ry the angle param has no effect
+        let phi = rx === ry ? 0 : (+angle * Math.PI) / 180;
+
         let cx, cy, startAngle, deltaAngle, endAngle;
         let PI = Math.PI;
         let PIpx = PI * 2;
-        if (rx < 0) {
-            rx = -rx;
-        }
-        if (ry < 0) {
-            ry = -ry;
-        }
+
         if (rx == 0 || ry == 0) {
             // invalid arguments
             throw Error("rx and ry can not be 0");
         }
-        let s_phi = Math.sin(phi);
-        let c_phi = Math.cos(phi);
+
+        // ensure rx and ry are positive
+        if (rx < 0 || ry < 0) {
+            [rx, ry] = [Math.abs(rx), Math.abs(ry)]
+        }
+
+        let s_phi = phi === 0 ? 0 : Math.sin(phi);
+        let c_phi = phi === 0 ? 1 : Math.cos(phi);
+
         let hd_x = (p0x - px) / 2; // half diff of x
         let hd_y = (p0y - py) / 2; // half diff of y
         let hs_x = (p0x + px) / 2; // half sum of x
         let hs_y = (p0y + py) / 2; // half sum of y
+
         // F6.5.1
         let p0x_ = c_phi * hd_x + s_phi * hd_y;
         let p0y_ = c_phi * hd_y - s_phi * hd_x;
+
         // F.6.6 Correction of out-of-range radii
         //   Step 3: Ensure radii are large enough
         let lambda = (p0x_ * p0x_) / (rx * rx) + (p0y_ * p0y_) / (ry * ry);
+
         if (lambda > 1) {
             rx = rx * Math.sqrt(lambda);
             ry = ry * Math.sqrt(lambda);
         }
+
         let rxry = rx * ry;
         let rxp0y_ = rx * p0y_;
         let ryp0x_ = ry * p0x_;
         let sum_of_sq = rxp0y_ * rxp0y_ + ryp0x_ * ryp0x_; // sum of square
         if (!sum_of_sq) {
-            console.log("start point can not be same as end point");
+            throw Error("start point can not be same as end point");
         }
+
         let coe = Math.sqrt(Math.abs((rxry * rxry - sum_of_sq) / sum_of_sq));
+
         if (largeArc == sweep) {
             coe = -coe;
         }
         // F6.5.2
         let cx_ = (coe * rxp0y_) / ry;
         let cy_ = (-coe * ryp0x_) / rx;
+
         // F6.5.3
         cx = c_phi * cx_ - s_phi * cy_ + hs_x;
         cy = s_phi * cx_ + c_phi * cy_ + hs_y;
@@ -1032,14 +1045,16 @@
         let xcr2 = (p0x_ + cx_) / rx;
         let ycr1 = (p0y_ - cy_) / ry;
         let ycr2 = (p0y_ + cy_) / ry;
+
         // F6.5.5
         startAngle = radian(1, 0, xcr1, ycr1);
+
         // F6.5.6
         deltaAngle = radian(xcr1, ycr1, -xcr2, -ycr2);
+
         if (deltaAngle > PIpx) {
             deltaAngle -= PIpx;
-        }
-        else if (deltaAngle < 0) {
+        } else if (deltaAngle < 0) {
             deltaAngle += PIpx;
         }
         if (sweep == false || sweep == 0) {
@@ -1048,20 +1063,24 @@
         endAngle = startAngle + deltaAngle;
         if (endAngle > PIpx) {
             endAngle -= PIpx;
-        }
-        else if (endAngle < 0) {
+        } else if (endAngle < 0) {
             endAngle += PIpx;
         }
+        let toDegFactor = 180 / PI;
         let outputObj = {
             cx: cx,
             cy: cy,
             rx: rx,
             ry: ry,
+            startAngle_deg: startAngle * toDegFactor,
             startAngle: startAngle,
+            deltaAngle_deg: deltaAngle * toDegFactor,
             deltaAngle: deltaAngle,
+            endAngle_deg: endAngle * toDegFactor,
             endAngle: endAngle,
             clockwise: sweep == true || sweep == 1
         };
+
         return outputObj;
     }
 
