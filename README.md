@@ -173,9 +173,9 @@ Optionally you can also include tangent angles and segment indices (as well as s
 |`getPathLengthLookup(d, precision, onlyLength )` |  `d` | A path data string or a already parsed path data array  | *none* |
 | | `precision` | Specify accuracy for Bézier length calculations. This parameter sets the amount of length intermediate calculations. Default should work even for highly accurate calcuations. Legendre-Gauss approximation is already adaptive  | **`medium`**, `high`, `low` |
 |  | `onlyLength`| skips the lookup creation and returns only the length of a path | `false` |
-| `getPointAtLength()` | `length` | *none*  | gets point at specified length  |
-|  | `getTangent` | false  |  include tangent angles in point object (can improve performance) |
-|  | `getSegment` | false  |  include segment info in object |
+| `getPointAtLength()` | `length` | gets point at specified length   | *none* |
+|  | `getTangent` | include tangent angles in point object (can improve performance)  | false   |
+|  | `getSegment` | include segment info in object | false  |  
 
 ```
 // select path
