@@ -325,8 +325,11 @@ let vertices = polygonFromPathData(pathData, options)
 
 ## Demos
 * [getPointAtlength: native vs. lookup](https://codepen.io/herrstrietzel/pen/KKEzdPd)
-* [Get point at length – performance/accuracy](https://codepen.io/herrstrietzel/pen/WNWRroO)
+* [get point, tangent and segment](https://codepen.io/herrstrietzel/pen/VYZXbwE?editors=1000)
+* [get point at length – performance/accuracy](https://codepen.io/herrstrietzel/pen/WNWRroO)
+* [get point and area](https://codepen.io/herrstrietzel/pen/wBwmdKv)  
 * [path to polygon](https://codepen.io/herrstrietzel/pen/XWGddRm)
+* [get length at point](https://codepen.io/herrstrietzel/pen/yyBKbNV)
 
 (See also demos folder)  
 
