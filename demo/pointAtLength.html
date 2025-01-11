@@ -51,7 +51,7 @@
 
 
         select,
-        input[type="text"] ,
+        input[type="text"],
         input[type="range"] {
             width: 100%;
             display: block
@@ -77,7 +77,7 @@
 
     <div class="grd">
         <div class="col">
-            <h3>Get point at length</h3>
+            <h3>Get point at length, tangent angle and segment </h3>
 
             <!-- samples -->
             <p>
@@ -86,14 +86,23 @@
             </p>
 
             <h3>Point at length</h3>
-            <p><input id="inputLength" class="inputs" type="range" value="250" min="0" max="1000" step="0.1"><span
+            <p><input id="inputLength" class="inputs" type="range" value="1" min="0" max="1000" step="0.1"><span
                     id="valLength"></span>
             </p>
 
             <h3>Accuracy</h3>
             <p id="resAcc"></p>
 
-            <h3>Legendre-Gauss lookup precision for  cubic beziers (0=auto – adjust accuracy) <span id="lgVal"></span></h3>
+            <h3>Tangent</h3>
+            <p id="tangentAngle"></p>
+
+            <h3>Segment at length</h3>
+            <p>
+            <code id="segment"></code>
+            </p>
+
+            <h3>Legendre-Gauss lookup precision for cubic beziers (0=auto – adjust accuracy) <span id="lgVal"></span>
+            </h3>
             <p><input id="inputLg" class="inputs" type="range" value="0" max="128" step="1"></p>
 
 
@@ -111,13 +120,21 @@
         <div class="col">
 
             <svg id="svg" viewBox="0 0 100 100">
-                <path class="previewPath" d="  
-    " />
+                <path class="previewPath" d="" />
+                <path id="segAtPoint" d="" fill="none" stroke="green" stroke-width="3%" stroke-opacity="0.5" />
+
+                <!-- tangent angle indicator -->
+                <line id="tangent" x1="0" y1="0" x2="0" y2="0" stroke="green" stroke-width="1%" />
+
 
                 <!-- native getPointAtLength-->
-                <circle id="splitN" cx="0" cy="0" r="2%" fill="gruen" fill-opacity="1" />
-                <!-- pathdata getPointAtLength-->
+                <circle id="splitN" cx="0" cy="0" r="2%" fill="blue" fill-opacity="1" />
+
+                <!-- pathdata getPointAtLength -->
                 <circle id="split" cx="0" cy="0" r="1%" fill="orange" fill-opacity="1" />
+
+
+
             </svg>
         </div>
 
@@ -165,6 +182,8 @@
 
 
 
+
+
             // init
             let path = document.querySelector('path')
             let svg = path.closest('svg')
@@ -176,9 +195,9 @@
              */
 
             // load examples            
-            for (let i = 0; i<samples.length; i++  ) {
+            for (let i = 0; i < samples.length; i++) {
                 let sample = samples[i]
-               // console.log(sample);
+                // console.log(sample);
 
                 let key = Object.keys(sample)[0];
                 //console.log(key);
@@ -198,12 +217,14 @@
             let d = svgInput.value
             let steps = 1000
             let lg = +inputLg.value;
-            let resIdeal=''
+            let resIdeal = ''
 
 
             perfStart()
             let pathLengthLookup = getPathLengthLookup(d, lg)
             perfEnd()
+
+            console.log('pathLengthLookup', pathLengthLookup);
 
 
             let totalLength = pathLengthLookup.totalLength
@@ -277,12 +298,12 @@
 
 
                 // get area
-               let pathData = parsePathDataNormalized(d, {arcToCubic: false })
-               //console.log(pathData);
+                let pathData = parsePathDataNormalized(d, { arcToCubic: false })
+                //console.log(pathData);
 
-               let area = getPathArea(pathData)
-               //console.log('area', area, Math.PI*10000**2);
-               console.log('area', area);
+                let area = getPathArea(pathData)
+                //console.log('area', area, Math.PI*10000**2);
+                console.log('area', area);
 
 
 
@@ -304,10 +325,27 @@
 
                 // get point at Length
                 let currentLength = totalLength / steps * value
-                let pt = pathLengthLookup.getPointAtLength(currentLength);
+                let getTangent = true;
+                let getSegment = true;
+                let pt = pathLengthLookup.getPointAtLength(currentLength, getTangent, getSegment);
+                let { angle } = pt;
 
-            
-  
+                console.log('pathLengthLookup:', pathLengthLookup);
+
+                tangent.setAttribute('x1', pt.x)
+                tangent.setAttribute('y1', pt.y)
+
+                let tangetLen = totalLength / 25;
+                let pT = getTangentPt(pt, tangetLen, angle - Math.PI / 2)
+
+                tangent.setAttribute('x2', pT.x)
+                tangent.setAttribute('y2', pT.y)
+
+                tangentAngle.textContent = `radians: ${angle}; degrees: ${angle * 180 / Math.PI}`
+
+
+
+
                 resAcc.innerHTML = `
                 <strong>length:</strong> ${totalLength} <br>
                 <strong>length Native:</strong> ${totalLengthN} <br>
@@ -317,11 +355,11 @@
                 `;
 
 
-                
+
                 split.setAttribute('cx', pt.x)
                 split.setAttribute('cy', pt.y)
 
-                
+
 
                 // native method get point at length – just for comparison
                 totalLengthN = path.getTotalLength()
@@ -331,6 +369,35 @@
                 splitN.setAttribute('cx', ptN.x)
                 splitN.setAttribute('cy', ptN.y)
 
+
+
+                //segment at point
+                let comSegment = pt.com;
+                console.log('comSegment', pt, comSegment);
+                let pathDataSeg = [
+                    { type: 'M', values: [comSegment.p0.x, comSegment.p0.y] },
+                    { type: comSegment.type, values: comSegment.values },
+                ]
+
+                if(comSegment.type==='Z'){
+                    pathDataSeg[1].type = 'L'
+                }
+
+                let dSeg = pathDataSeg.map(com=>{return `${com.type} ${com.values.join(' ')}` }).join(' ')
+                segAtPoint.setAttribute('d', dSeg)
+                segment.textContent = '  index:'+ pt.index+ ' pathdata:'+ dSeg ;
+
+
+            }
+
+
+
+            function getTangentPt(pt, len = 10, angle) {
+                let ptA = {
+                    x: pt.x + len * Math.cos(angle),
+                    y: pt.y + len * Math.sin(angle)
+                }
+                return ptA
             }
 
 

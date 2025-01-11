@@ -6,6 +6,12 @@
 Calculates a path's length or points at length based on raw pathdata.  
 This library aims to work as a workaround to emulate natively supported browser methods `getTotalLength()` and `getPointAtLength()` in a non-rendered environment such as node or virtual DOM applications or canvas.  
 
+**Features:**
+This library provides methods to get:
+* **path length** from raw SVG path data strings
+* **point** coordinates at specified lengtha
+* **tangent angles** (handy for SVG motion path emulations)
+
 The provided methods calculate points at lengths by measuring all segments lengths and saving them in a **reusable lookup object**.    
 
 This way you can efficiently calculate hundreds of points on a path without sacrificing too much performance – unlike the quite expensive native `getPointAtlength()` method.
@@ -30,6 +36,12 @@ This way you can efficiently calculate hundreds of points on a path without sacr
 Load JS locally or via cdn
 ```
 <script src="https://cdn.jsdelivr.net/npm/svg-getpointatlength@latest/getPointAtLengthLookup.js"></script>
+```
+
+or (unpkg.com version)
+
+``` lang-html
+<script src="https://www.unpkg.com/svg-getpointatlength@latest/getPointAtLengthLookup.js"></script>
 ```
 
 or minified version (~ 9KB/4KB gzipped) 
@@ -125,7 +137,7 @@ let pt = pathLengthLookup.getPointAtLength(totalLength/2)
 console.log(pt)
 ```
 
-## Methods
+## Methods and options
 `getPathLengthLookup(d)` returns a lookup objects including reusable data about ech path segment as well as the total length.  
 
 ```
@@ -145,13 +157,84 @@ console.log(pt)
 }
 ```
 
-`lookup.pathLengthLookup.getPointAtLength(length)` returns an object like this 
+`lookup.pathLengthLookup.getPointAtLength(length, getTangent = false, getSegment = false)` returns an object like this 
 
 ```
 {x: 10, y:20, index:segmentIndex, t:tValue}
 ```
 
+### Options: get tangent angles or segments at point
+Optionally you can also include tangent angles and segment indices (as well as self contained path data) from the current point-at-length:  
+
+| method | options/agruments | description | default/values |
+|--|--|--|--|
+|`getPathLengthLookup(d, precision, onlyLength )` |  `d` | A path data string or a already parsed path data array  | *none* |
+| | `precision` | Specify accuracy for Bézier length calculations. This parameter sets the amount of length intermediate calculations. Default should work even for highly accurate calcuations. Legendre-Gauss approximation is already adaptive  | **`medium`**, `high`, `low` |
+|  | `onlyLength`| skips the lookup creation and returns only the length of a path | `false` |
+| `getPointAtLength()` | `length` | *none*  | gets point at specified length  |
+|  | `getTangent` | false  |  include tangent angles in point object (can improve performance) |
+|  | `getSegment` | false  |  include segment info in object |
+
+```
+// select path
+let path = document.querySelector('path')
+
+// get path data attribute
+let d = path.getAttribute('d')
+
+// measure path, create lookup
+let pathLengthLookup = getPathLengthLookup(d)
+
+// get point, tangent and segment
+let length = 100;
+let getTangent = true;
+let getSegment = true;
+let pt = pathLengthLookup.getPointAtLength(length, getTangent, getSegment);
+
+let tangentAngle = pt.angle;
+let segmentIndex = pt.index;
+let segmentCommand = pt.com;
+
+```
+
+The returned data object will look like this:  
+
+```
+{
+    // tangent angle in radians
+    angle: 1.123,
+
+    // original command
+    com: {type: 'A', values: Array(7), p0: {…}},
+
+    // original command/segment index
+    index: 1,
+
+    // t value for target length
+    t: 0.25,
+
+    // point coordinates
+    x: 10,
+    y: 15,
+}
+
+```
+See pointAtLength.html example in demos folder.
+
 So you also have info about the current segment the length is in as well as the `t` value used to interpolate the point.  
+
+## Updates and Versions
+
+### Latest features
+* Version 1.0.13 added support for **tangent angles** at a specified length/point.
+
+### Downgrading
+In case you encounter any problems with the latest versions you can just load a previous one like so:
+
+``` lang-html
+<script src="https://www.unpkg.com/svg-getpointatlength@1.0.12/getPointAtLengthLookup.js"></script>
+```  
+See npm repo for all [existing versions](https://www.npmjs.com/package/svg-getpointatlength?activeTab=versions)
 
 
 ## How it works
@@ -243,6 +326,8 @@ let vertices = polygonFromPathData(pathData, options)
 * [Get point at length – performance/accuracy](https://codepen.io/herrstrietzel/pen/WNWRroO)
 * [path to polygon](https://codepen.io/herrstrietzel/pen/XWGddRm)
 
+(See also demos folder)  
+
 
 
 ## Alternative libraries
@@ -250,7 +335,14 @@ let vertices = polygonFromPathData(pathData, options)
 * [rveciana's "svg-path-properties"](https://github.com/rveciana/svg-path-properties) 
 
 ## Credits
-* Mike 'Pomax' Kamermans for explaining the theory. See Stackoverflow post ["Finding points on curves in HTML 5 2d Canvas context"](https://stackoverflow.com/questions/3570309/finding-points-on-curves-in-html-5-2d-canvas-context/#76773275)  
-* obviously, Dmitry Baranovskiy – a lot of these helper functions originate either from Raphaël or snap.svg – or are at least heavily inspired by some helpers from these libraries
-* Jarek Foksa for developping the great [getPathData() polyfill](https://github.com/jarek-foksa/path-data-polyfill) – probably the most productive contributor to the ["new" W3C SVGPathData interface draft](https://svgwg.org/specs/paths/#InterfaceSVGPathData).
-* puzrin's for [svgpath library](https://github.com/fontello/svgpath) providing for instance a great [arc-to-cubic approximation](https://github.com/fontello/svgpath/blob/master/lib/a2c.js) 
+* [Mike 'Pomax' Kamermans](https://github.com/pomax) for explaining the theory. See Stackoverflow post ["Finding points on curves in HTML 5 2d Canvas context"](https://stackoverflow.com/questions/3570309/finding-points-on-curves-in-html-5-2d-canvas-context/#76773275)  
+* [Vitaly Puzrin](https://github.com/puzrin) for [svgpath library](https://github.com/fontello/svgpath) providing for instance a great and customizable [arc-to-cubic approximation](https://github.com/fontello/svgpath/blob/master/lib/a2c.js) – the base for the more accurate arc-to-cubic approximations
+* [Jarek Foksa](https://github.com/jarek-foksa) for developping the great [getPathData() polyfill](https://github.com/jarek-foksa/path-data-polyfill) – probably the most productive contributor to the ["new" W3C SVGPathData interface draft](https://svgwg.org/specs/paths/#InterfaceSVGPathData)
+* obviously, [Dmitry Baranovskiy](https://github.com/dmitrybaranovskiy) – a lot of these helper functions originate either from Raphaël or snap.svg – or are at least heavily inspired by some helpers from these libraries
+
+
+## Related Repositories/projects
+* [svg-parse-path-normalized](https://github.com/herrstrietzel/svg-parse-path-normalized) – Parse path data from string including fine-grained normalizing options
+* [fix-path-directions](https://github.com/herrstrietzel/fix-path-directions) – Correct sub path directions in compound path for apps that don't support fill-rules or just reverse path directions (e.g for path animations)
+* [svg-pathdata-getbbox](https://github.com/herrstrietzel/svg-pathdata-getbbox) – Calculates a path bounding box based on its raw pathdata
+* [svg-transform](https://github.com/herrstrietzel/svg-transform) – A library to transform or de-transform/flatten svg paths

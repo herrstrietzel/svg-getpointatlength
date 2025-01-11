@@ -85,7 +85,6 @@ function getPathArea(pathData) {
             multiplier = -1;
         }
 
-        console.log(counterShapes, areaPoly, bezierArea);
         //values have the same sign - subtract polygon area
         if (
             (areaPoly < 0 && bezierArea < 0) 
@@ -96,8 +95,6 @@ function getPathArea(pathData) {
         }
 
         totalArea += pathArea;
-
-        console.log(pathArea);
     })
 
     return totalArea;
