@@ -9,7 +9,7 @@ This library aims to work as a workaround to emulate natively supported browser 
 **Features:**
 This library provides methods to get:
 * **path length** from raw SVG path data strings
-* **point** coordinates at specified lengtha
+* **point** coordinates at specified length
 * **tangent angles** (handy for SVG motion path emulations)
 
 The provided methods calculate points at lengths by measuring all segments lengths and saving them in a **reusable lookup object**.    
@@ -19,6 +19,8 @@ This way you can efficiently calculate hundreds of points on a path without sacr
 * [Usage](#usage)
   + [Browser](#browser)
   + [Node](#node)
+* [Methods and options](#methods-and-options)  
+  + [Options: get tangent angles or segments at point](#options-get-tangent-angles-or-segments-at-point)  
 * [How it works](#how-it-works)
   + [Path data input](#path-data-input)
   + [Parsing options](#parsing-options)
