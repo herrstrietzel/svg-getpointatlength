@@ -3,14 +3,15 @@
 
 
 # svg-getpointatlength
-Calculates a path's length or points at length based on raw pathdata.  
-This library aims to work as a workaround to emulate natively supported browser methods `getTotalLength()` and `getPointAtLength()` in a non-rendered environment such as node or virtual DOM applications or canvas.  
+Calculates a path's **length** or **points** as well as **tangent angles** at length based on raw pathdata strings.  
+This library aims to work as a performant workaround to emulate natively supported browser methods `getTotalLength()` and `getPointAtLength()` in a non-rendered environment such as node or virtual DOM applications or canvas.  
 
 **Features:**
 This library provides methods to get:
 * **path length** from raw SVG path data strings
 * **point** coordinates at specified length
 * **tangent angles** (handy for SVG motion path emulations)
+* **segments** at length
 
 The provided methods calculate points at lengths by measuring all segments lengths and saving them in a **reusable lookup object**.    
 
@@ -89,7 +90,7 @@ console.log(pt)
 ```
 
 #### Length only
-If you only need to retrieve the total lenght of a path you can use the simplified helper  `getPathLengthFromD()`
+If you only need to retrieve the total length of a path you can use the simplified helper  `getPathLengthFromD()`
 
 ```
 // only length – slightly faster as we don't calculate intermediate lengths
@@ -170,9 +171,10 @@ Optionally you can also include tangent angles and segment indices (as well as s
 
 | method | options/agruments | description | default/values |
 |--|--|--|--|
-|`getPathLengthLookup(d, precision, onlyLength )` |  `d` | A path data string or a already parsed path data array  | *none* |
+|`getPathLengthLookup(d, precision, onlyLength, getTangent )` |  `d` | A path data string or a already parsed path data array  | *none* |
 | | `precision` | Specify accuracy for Bézier length calculations. This parameter sets the amount of length intermediate calculations. Default should work even for highly accurate calcuations. Legendre-Gauss approximation is already adaptive  | **`medium`**, `high`, `low` |
 |  | `onlyLength`| skips the lookup creation and returns only the length of a path | `false` |
+|  | `getTangent` | include tangent angles in lookup object (can improve performance)  | true   |
 | `getPointAtLength()` | `length` | gets point at specified length   | *none* |
 |  | `getTangent` | include tangent angles in point object (can improve performance)  | false   |
 |  | `getSegment` | include segment info in object | false  |  
@@ -228,7 +230,8 @@ So you also have info about the current segment the length is in as well as the 
 ## Updates and Versions
 
 ### Latest features
-* Version 1.0.13 added support for **tangent angles** at a specified length/point.
+* Version 1.0.15 improved performance for recurring point-at-length calculations
+* Version 1.0.13 added support for **tangent angles** at a specified length/point
 
 ### Downgrading
 In case you encounter any problems with the latest versions you can just load a previous one like so:
