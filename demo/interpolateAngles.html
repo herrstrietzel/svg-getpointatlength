@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+
+    <!-- 
+        <script src="https://cdn.jsdelivr.net/npm/svg-getpointatlength@latest/getPointAtLengthLookup.js"></script>
+
+
+    <script src="https://cdn.jsdelivr.net/npm/svg-getpointatlength@latest/getPointAtLengthLookup.js"></script>
+
+
+    -->
+
+
+    <script src="../getPointAtLengthLookup.js"></script>
+
+
+
+    <style>
+        body {
+            font-family: sans-serif;
+        }
+
+        svg {
+            width: 50%;
+            overflow: visible;
+            border: 1px solid #ccc;
+            padding: 20%;
+        }
+
+
+        .grd {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2em;
+            height: 95vh;
+        }
+
+
+        .col {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+            justify-content: flex-start;
+        }
+
+        .col * {
+            margin-top: 0;
+            margin-bottom: 1rem;
+        }
+
+        textarea {
+            width: 100%;
+            display: block;
+            min-height: 10em;
+            height: 50%;
+            flex: 1 1 auto;
+
+        }
+
+
+        select,
+        input[type="text"],
+        input[type="range"] {
+            width: 100%;
+            display: block
+        }
+
+        #valLength {
+            display: block;
+
+        }
+
+        .previewPath {
+            fill: none;
+            stroke-width: 1%;
+            stroke: #000;
+        }
+
+        svg {
+            display: block;
+            height: 30vh;
+            width: auto;
+
+        }
+    </style>
+
+</head>
+
+<body>
+
+
+    <!-- 
+    M10 50q100 0 100 100 q0 100 -100 100
+
+
+   m 50 0        
+        Q 36.4 0 24.8 6.8        
+        t -18 18         
+        t -6.8 25.2         
+        C 0 63.8 5.6 76.3 14.65 85.35         
+        s 21.55 14.65 35.35 14.65      
+
+        a 50 25 -45 0115.8 -34.3
+         50 25 -45 0134.2 -25.7
+         
+        h -20-.5         
+        v -12.5-12.5         
+        H 75 50         
+        V 0   
+        z     
+
+        M 40 60 
+        h-20 
+        V 20
+        h 18 .5.5.5.5
+         z 
+
+    -->
+
+    <svg id="svg" viewBox="0 100 80 100">
+        <path id="path" class="previewPath" d=" 
+        
+        M 70 25 
+        A 5 10 45 1 0 40 20
+
+        " />
+        <path id="segAtPoint" d="" fill="none" stroke="green" stroke-width="3%" stroke-opacity="0.5" />
+
+        <!-- tangent angle indicator -->
+        <line id="tangent" x1="0" y1="0" x2="0" y2="0" stroke="green" stroke-width="1%" />
+
+
+    </svg>
+
+
+
+    <script>
+
+
+        let d = path.getAttribute('d')
+        let quality = 'medium';
+        let lengthOnly = false;
+        let getTangent = true;
+
+        let pathLengthLookup = getPathLengthLookup(d, quality, lengthOnly, getTangent )
+        let totalLength = pathLengthLookup.totalLength
+        let steps = 5
+        let step = totalLength / steps
+
+        //let angles = []
+        console.log(pathLengthLookup);
+
+
+        // adjust viewBox
+        let vB = path.getBBox()
+        svg.setAttribute('viewBox', [vB.x, vB.y, vB.width, vB.height].join(' '))
+
+
+
+
+
+
+        // interpolated angles
+        
+        perfStart();
+        steps = 10
+        step = totalLength / steps
+        for (let i = 0; i <= steps; i++) {
+
+            let len0 = step * i
+            //let angleI = interpolateAngle(len0, angles)
+
+            let pt = pathLengthLookup.getPointAtLength(step * i, true);
+
+            //renderPoint(svg, pt)
+            //angles.push( {len: step * i, ang: pt.angle } )
+            //renderTangent(svg, pt, pt.angle- Math.PI * 0.5 )
+        }
+
+        perfEnd();
+        
+
+
+
+
+        function renderTangent(svg, pt, angle = 0, stroke = "green", strokeWidth = "0.5%", len = 10, render = true) {
+
+            let ptA = {
+                x: pt.x + len * Math.cos(angle),
+                y: pt.y + len * Math.sin(angle)
+            }
+
+            //console.log('ptA', ptA, angle);
+
+            let line = `<line x1="${pt.x}" y1="${pt.y}" x2="${ptA.x}" y2="${ptA.y}" stroke="${stroke}" stroke-width="${strokeWidth}"  />`
+
+            if (render) svg.insertAdjacentHTML('beforeend', line)
+
+            return line
+        }
+
+
+
+
+
+        function getTangentPt(pt, len = 10, angle) {
+            let ptA = {
+                x: pt.x + len * Math.cos(angle),
+                y: pt.y + len * Math.sin(angle)
+            }
+            return ptA
+        }
+
+
+        function renderPoint(
+            svg,
+            coords,
+            fill = "red",
+            r = "2",
+            opacity = "1",
+            id = "",
+            className = ""
+        ) {
+            //console.log(coords);
+            if (Array.isArray(coords)) {
+                coords = {
+                    x: coords[0],
+                    y: coords[1]
+                };
+            }
+
+            let marker = `<circle class="${className}" opacity="${opacity}" id="${id}" cx="${coords.x}" cy="${coords.y}" r="${r}" fill="${fill}">
+<title>${coords.x} ${coords.y}</title></circle>`;
+            svg.insertAdjacentHTML("beforeend", marker);
+        }
+
+
+        /**
+         * simple performance test
+         */
+
+        function perfStart() {
+            t0 = performance.now();
+        }
+
+        function perfEnd(text = '') {
+            t1 = performance.now();
+            total = t1 - t0;
+            console.log(`excecution time ${text}:  ${total} ms`);
+            return total;
+        }
+
+
+
+        function pointAtT(pts, t = 0.5, getTangent = false) {
+
+
+            /**
+            * Linear  interpolation (LERP) helper
+            */
+            const interpolate = (p1, p2, t, getTangent = false) => {
+
+                let pt = {
+                    x: (p2.x - p1.x) * t + p1.x,
+                    y: (p2.y - p1.y) * t + p1.y,
+                };
+
+                if (getTangent) {
+                    pt.angle = getAngle(p1, p2)
+                }
+
+                return pt
+            }
+
+            /**
+            * calculate single points on segments
+            */
+            const getPointAtCubicSegmentT = (p0, cp1, cp2, p, t, getTangent = false) => {
+                let t1 = 1 - t;
+                let pt;
+
+                if (getTangent) {
+                    let m0 = interpolate(p0, cp1, t);
+                    let m1 = interpolate(cp1, cp2, t);
+                    let m2 = interpolate(cp2, p, t);
+                    let m3 = interpolate(m0, m1, t);
+                    let m4 = interpolate(m1, m2, t);
+                    pt = interpolate(m3, m4, t);
+                    pt.angle = getAngle(m3, m4)
+
+                } else {
+                    pt = {
+                        x:
+                            t1 ** 3 * p0.x +
+                            3 * t1 ** 2 * t * cp1.x +
+                            3 * t1 * t ** 2 * cp2.x +
+                            t ** 3 * p.x,
+                        y:
+                            t1 ** 3 * p0.y +
+                            3 * t1 ** 2 * t * cp1.y +
+                            3 * t1 * t ** 2 * cp2.y +
+                            t ** 3 * p.y,
+                    };
+                }
+
+                return pt
+            }
+
+            const getPointAtQuadraticSegmentT = (p0, cp1, p, t, getTangent = false) => {
+                let t1 = 1 - t;
+                let pt;
+
+                if (getTangent) {
+
+                    let m1 = interpolate(p0, cp1, t);
+                    let m2 = interpolate(cp1, p, t);
+
+                    pt = interpolate(m1, m2, t);
+                    pt.angle = getAngle(m1, m2)
+
+                } else {
+                    pt = {
+                        x: t1 * t1 * p0.x + 2 * t1 * t * cp1.x + t ** 2 * p.x,
+                        y: t1 * t1 * p0.y + 2 * t1 * t * cp1.y + t ** 2 * p.y,
+                    };
+                }
+                return pt
+            }
+
+            let pt
+            if (pts.length === 4) {
+                pt = getPointAtCubicSegmentT(pts[0], pts[1], pts[2], pts[3], t, getTangent)
+            }
+            else if (pts.length === 3) {
+                pt = getPointAtQuadraticSegmentT(pts[0], pts[1], pts[2], t, getTangent)
+            }
+            else {
+                pt = interpolate(pts[0], pts[1], t, getTangent)
+            }
+            return pt
+        }
+
+
+
+
+
+    </script>
+
+</body>
+
+</html>

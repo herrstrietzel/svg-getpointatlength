@@ -86,7 +86,7 @@
             </p>
 
             <h3>Point at length</h3>
-            <p><input id="inputLength" class="inputs" type="range" value="1" min="0" max="1000" step="0.1"><span
+            <p><input id="inputLength" class="inputs" type="range" value="0" min="0" max="1000" step="0.1"><span
                     id="valLength"></span>
             </p>
 
@@ -101,9 +101,20 @@
             <code id="segment"></code>
             </p>
 
-            <h3>Legendre-Gauss lookup precision for cubic beziers (0=auto – adjust accuracy) <span id="lgVal"></span>
-            </h3>
-            <p><input id="inputLg" class="inputs" type="range" value="0" max="128" step="1"></p>
+            <!-- 
+                <h3>Legendre-Gauss lookup precision for cubic beziers (0=auto – adjust accuracy) <span id="lgVal"></span>
+                </h3>
+                <p><input id="inputLg" class="inputs" type="range" value="0" max="128" step="1"></p>
+            -->
+
+            <h3>Quality</h3>
+            <p>
+                <select class="inputs" id="inputQ">
+                    <option value="low">low</option>
+                    <option value="medium">medium</option>
+                    <option value="high">high</option>
+                </select>
+            </p>
 
 
             <p id="totalL" style="display:none"></p>
@@ -216,15 +227,13 @@
 
             let d = svgInput.value
             let steps = 1000
-            let lg = +inputLg.value;
+            let quality = inputQ.value;
             let resIdeal = ''
 
 
             perfStart()
-            let pathLengthLookup = getPathLengthLookup(d, lg)
+            let pathLengthLookup = getPathLengthLookup(d, quality)
             perfEnd()
-
-            console.log('pathLengthLookup', pathLengthLookup);
 
 
             let totalLength = pathLengthLookup.totalLength
@@ -261,7 +270,7 @@
             });
 
 
-            inputLg.addEventListener('input', e => {
+            inputQ.addEventListener('input', e => {
                 updateSVG()
             })
 
@@ -290,11 +299,15 @@
             function updateLength() {
 
                 // get pathlength lookup
-                lg = +inputLg.value
-                lgVal.textContent = lg
-                pathLengthLookup = getPathLengthLookup(d, lg)
+                //lg = +inputLg.value
+                //lgVal.textContent = lg
+
+                quality = inputQ.value;
+                pathLengthLookup = getPathLengthLookup(d, quality)
                 totalLength = pathLengthLookup.totalLength
 
+
+                console.log('pathLengthLookup', pathLengthLookup);
 
 
                 // get area
@@ -303,12 +316,12 @@
 
                 let area = getPathArea(pathData)
                 //console.log('area', area, Math.PI*10000**2);
-                console.log('area', area);
+                //console.log('area', area);
 
 
 
                 // only pathLength
-                totalLengthSimple = getPathLengthFromD(d, lg)
+                totalLengthSimple = getPathLengthFromD(d, quality)
                 //console.log('just length', totalLengthSimple);
 
 
@@ -330,7 +343,7 @@
                 let pt = pathLengthLookup.getPointAtLength(currentLength, getTangent, getSegment);
                 let { angle } = pt;
 
-                console.log('pathLengthLookup:', pathLengthLookup);
+                //console.log('pathLengthLookup:', pathLengthLookup, angle);
 
                 tangent.setAttribute('x1', pt.x)
                 tangent.setAttribute('y1', pt.y)
@@ -373,7 +386,8 @@
 
                 //segment at point
                 let comSegment = pt.com;
-                console.log('comSegment', pt, comSegment);
+                //console.log('comSegment', pt, comSegment);
+
                 let pathDataSeg = [
                     { type: 'M', values: [comSegment.p0.x, comSegment.p0.y] },
                     { type: comSegment.type, values: comSegment.values },
