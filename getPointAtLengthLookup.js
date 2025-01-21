@@ -33,7 +33,6 @@
 
     function pointAtT(pts, t = 0.5, getTangent = false) {
 
-
         /**
         * Linear  interpolation (LERP) helper
         */
@@ -46,6 +45,9 @@
 
             if (getTangent) {
                 pt.angle = getAngle(p1, p2)
+
+                // normalize negative angles
+                if (pt.angle < 0) pt.angle += Math.PI * 2
             }
 
             return pt
@@ -56,16 +58,34 @@
         */
         const getPointAtCubicSegmentT = (p0, cp1, cp2, p, t, getTangent = false) => {
             let t1 = 1 - t;
-            let pt;
+            let pt = { x: 0, y: 0 };
 
             if (getTangent) {
-                let m0 = interpolate(p0, cp1, t);
-                let m1 = interpolate(cp1, cp2, t);
-                let m2 = interpolate(cp2, p, t);
-                let m3 = interpolate(m0, m1, t);
-                let m4 = interpolate(m1, m2, t);
-                pt = interpolate(m3, m4, t);
-                pt.angle = getAngle(m3, m4)
+
+                if (t === 0) {
+                    pt.x = p0.x;
+                    pt.y = p0.y;
+                    pt.angle = getAngle(p0, cp1)
+                }
+
+                else if (t === 1) {
+                    pt.x = p.x;
+                    pt.y = p.y;
+                    pt.angle = getAngle(cp2, p)
+                }
+
+                else {
+                    let m0 = interpolate(p0, cp1, t);
+                    let m1 = interpolate(cp1, cp2, t);
+                    let m2 = interpolate(cp2, p, t);
+                    let m3 = interpolate(m0, m1, t);
+                    let m4 = interpolate(m1, m2, t);
+                    pt = interpolate(m3, m4, t);
+                    pt.angle = getAngle(m3, m4)
+                }
+
+                // normalize negative angles
+                if (pt.angle < 0) pt.angle += Math.PI * 2
 
             } else {
                 pt = {
@@ -87,15 +107,31 @@
 
         const getPointAtQuadraticSegmentT = (p0, cp1, p, t, getTangent = false) => {
             let t1 = 1 - t;
-            let pt;
+            let pt = { x: 0, y: 0 };
 
             if (getTangent) {
 
-                let m1 = interpolate(p0, cp1, t);
-                let m2 = interpolate(cp1, p, t);
+                if (t === 0) {
+                    pt.x = p0.x;
+                    pt.y = p0.y;
+                    pt.angle = getAngle(p0, cp1)
+                }
 
-                pt = interpolate(m1, m2, t);
-                pt.angle = getAngle(m1, m2)
+                else if (t === 1) {
+                    pt.x = p.x;
+                    pt.y = p.y;
+                    pt.angle = getAngle(cp1, p)
+                }
+                else {
+                    let m1 = interpolate(p0, cp1, t);
+                    let m2 = interpolate(cp1, p, t);
+
+                    pt = interpolate(m1, m2, t);
+                    pt.angle = getAngle(m1, m2)
+                }
+
+                // normalize negative angles
+                if (pt.angle < 0) pt.angle += Math.PI * 2
 
             } else {
                 pt = {
@@ -130,34 +166,56 @@
     //pathLengthLookup
     PathLengthObject.prototype.getPointAtLength = function (length = 0, getTangent = false, getSegment = false) {
 
-        //console.log(this);
         let { segments, totalLength } = this;
-        let foundSegment = false;
-        let pt = { x: 0, y: 0 };
-        let newT = 0;
 
-        // first point
-        if (length === 0 && !getTangent) {
-            return segments[0].points[0];
+        // disable tangents if no angles present in lookup
+        if(!segments[0].angles.length) getSegment = false
+
+        // 1st segment
+        let M = segments[0].points[0];
+        let angle0 = segments[0].angles[0]
+
+        let newT = 0;
+        let foundSegment = false;
+        let pt = { x: M.x, y: M.y };
+        if (getTangent) pt.angle = angle0
+
+        // return segment data
+        if (getSegment) {
+            pt.index = segments[0].index;
+            pt.com = segments[0].com;
         }
 
-        // last point on path
-        if (+length.toFixed(3) === +totalLength.toFixed(3) && !getTangent) {
-            let { points } = segments[segments.length - 1];
-            pt = points[points.length - 1];
+
+        // first or last point on path
+        if (length === 0) {
+            return pt;
+        }
+        else if (length === totalLength) {
+            let seglast = segments[segments.length - 1]
+            let ptLast = seglast.points.slice(-1)[0]
+            let angleLast = seglast.angles.slice(-1)[0]
+
+            pt.x = ptLast.x;
+            pt.y = ptLast.y;
+            if (getTangent) pt.angle = angleLast;
+
+            if (getSegment) {
+                pt.index = segments.length - 1;
+                pt.com = segments[segments.length - 1].com;
+            }
             return pt;
         }
 
         //loop through segments
         for (let i = 0; i < segments.length && !foundSegment; i++) {
             let segment = segments[i];
-            //let segmentPrev = segments[i-1] ? segments[i-1] : segment;
-            let { type, lengths, points, total, angles, ts } = segment;
+            let { type, lengths, points, total, angles, com } = segment;
             let end = lengths[lengths.length - 1];
             let tStep = 1 / (lengths.length - 1);
 
             // find path segment
-            if (end > length || (getTangent && end >= length)) {
+            if (end >= length) {
                 foundSegment = true;
                 let foundT = false;
                 let diffLength;
@@ -167,24 +225,17 @@
                         diffLength = end - length;
                         newT = 1 - (1 / total) * diffLength;
 
-                        // calculate point and angle
-                        if (angles.length) {
-                            pt = pointAtT(points, newT)
-
-                            // take angle from lookup
-                            pt.angle = angles[0];
-                        } else {
-                            pt = pointAtT(points, newT, getTangent)
-                        }
+                        pt = pointAtT(points, newT)
+                        pt.type = 'L'
+                        if (getTangent) pt.angle = angles[0];
                         break;
 
-
                     case 'A':
+
                         diffLength = end - length;
                         newT = 1 - (1 / total) * diffLength;
                         let { cx, cy, startAngle, endAngle, deltaAngle } = segment.points[1]
                         let newAngle = -deltaAngle * newT
-
 
                         // rotate point
                         let cosA = Math.cos(newAngle);
@@ -196,15 +247,10 @@
                             y: (cosA * (p0.y - cy)) - (sinA * (p0.x - cx)) + cy
                         }
 
-                        //console.log('arc:', startAngle, endAngle, deltaAngle);
-
-                        let angleOff = deltaAngle > 0 ? Math.PI / 2 : Math.PI / -2;
-
-                        // interpolate angle
+                        // angle
                         if (getTangent) {
-
+                            let angleOff = deltaAngle > 0 ? Math.PI / 2 : Math.PI / -2;
                             pt.angle = startAngle + (deltaAngle * newT) + angleOff
-
                         }
 
                         break;
@@ -222,16 +268,30 @@
                             diffLength = end - length;
                             newT = 1 - (1 / total) * diffLength;
                             pt = newT <= 1 ? pointAtT([points[0], points[2]], newT, getTangent) : points[points.length - 1];
+                            pt.angle = angles[0];
                         }
 
                         // is curve
                         else {
                             for (let i = 0; i < lengths.length && !foundT; i++) {
                                 let lengthAtT = lengths[i];
-                                let lengthAtTPrev = i > 0 ? lengths[i - 1] : lengths[i];
+                                if (getTangent) pt.angle = angles[0];
+
+                                // first or last point in segment
+                                if (i === 0) {
+                                    pt.x = com.p0.x
+                                    pt.y = com.p0.y
+                                }
+                                else if (lengthAtT === length) {
+                                    pt.x = points[points.length - 1].x
+                                    pt.y = points[points.length - 1].y
+                                }
 
                                 // found length at t range
-                                if (lengthAtT >= length) {
+                                else if (lengthAtT > length && i > 0) {
+
+                                    let lengthAtTPrev = i > 0 ? lengths[i - 1] : lengths[i];
+
                                     let t = tStep * i;
                                     // length between previous and current t
                                     let tSegLength = lengthAtT - lengthAtTPrev;
@@ -243,7 +303,14 @@
                                     foundT = true;
 
                                     // return point and optionally angle
-                                    pt = pointAtT(points, newT, getTangent)
+                                    pt = pointAtT(points, newT)
+
+                                    if (getTangent) {
+                                        //interpolate angle
+                                        let rat = (length - lengthAtTPrev) / (lengthAtT - lengthAtTPrev);
+                                        pt.angle = (angles[i] - angles[i - 1]) * rat + angles[i - 1]
+
+                                    }
                                 }
                             }
                         }
@@ -253,7 +320,6 @@
                 pt.t = newT;
             }
 
-            // return segment data
             if (getSegment) {
                 pt.index = segment.index;
                 pt.com = segment.com;
@@ -261,12 +327,13 @@
 
         }
 
-
-
         return pt;
     }
 
-    function getPathLengthLookup(d, precision = 'medium', onlyLength = false) {
+    function getPathLengthLookup(d, precision = 'medium', onlyLength = false, getTangent = true) {
+
+        // disable tangent calculation in length-only mode
+        if(onlyLength) getTangent=false;
 
         const checkFlatnessByPolygonArea = (points) => {
             let area = 0;
@@ -289,7 +356,7 @@
         let lg = precision === 'medium' ? 24 : 12;
         let lgArr = [12, 24, 36, 48, 60, 64, 72, 96];
         let tDivisionsQ = precision === 'low' ? 10 : 12;
-        let tDivisionsC = precision === 'low' ? 16 : (precision === 'medium' ? 24 : 36);
+        let tDivisionsC = precision === 'low' ? 15 : (precision === 'medium' ? 23 : 35);
         let tDivisions = tDivisionsC;
 
         // get pathdata
@@ -310,7 +377,7 @@
             let { type, values } = com;
             let valuesL = values.length;
             let p = { x: values[valuesL - 2], y: values[valuesL - 1] };
-            let len, cp1, cp2, t;
+            let len, cp1, cp2, t, angle;
 
 
             // collect segment data in object
@@ -343,6 +410,12 @@
                     }
                     len = getLength([p0, p]);
                     lengthObj.points.push(p0, p);
+
+                    if (getTangent) {
+                        angle = Math.atan2(p.y - p0.y, p.x - p0.x)
+                        lengthObj.angles.push(angle);
+                    }
+
                     break;
 
                 case "A":
@@ -360,6 +433,10 @@
                     // get arc length: perfect circle length linearly interpolated according to delta angle
                     len = 2 * Math.PI * rx * (1 / 360 * Math.abs(deltaAngle * 180 / PI))
 
+                    if (getTangent) {
+                        lengthObj.angles = [startAngle + Math.PI * 0.5, endAngle + Math.PI * 0.5];
+                    }
+
                     lengthObj.points = [
                         p0,
                         {
@@ -373,12 +450,13 @@
 
                 case "C":
                 case "Q":
-                    lengthObj.lengths.push(pathLength);
                     cp1 = { x: values[0], y: values[1] };
                     cp2 = type === 'C' ? { x: values[2], y: values[3] } : cp1;
                     let pts = type === 'C' ? [p0, cp1, cp2, p] : [p0, cp1, p];
                     tDivisions = (type === 'Q') ? tDivisionsQ : tDivisionsC
 
+                    // length at t=0
+                    lengthObj.lengths.push(pathLength);
 
                     // is flat/linear – treat as lineto
                     let isFlat = checkFlatnessByPolygonArea(pts);
@@ -389,6 +467,10 @@
                         len = getLength(pts)
                         lengthObj.type = "L";
                         lengthObj.points.push(p0, p);
+                        if (getTangent) {
+                            angle = Math.atan2(p.y - p0.y, p.x - p0.x)
+                            lengthObj.angles.push(angle);
+                        }
                         break;
 
                     } else {
@@ -427,10 +509,23 @@
                     }
 
                     if (!onlyLength && !isFlat) {
+
+                        // get previous end angle
+                        let angleStart = lengthLookup.segments[i - 2] ? lengthLookup.segments[i - 2].angles.slice(-1)[0] : pointAtT(pts, 0, true).angle;
+
+                        if(getTangent) lengthObj.angles.push(angleStart);
+
                         for (let d = 1; d < tDivisions; d++) {
                             t = (1 / tDivisions) * d;
                             lengthObj.lengths.push(getLength(pts, t, lg) + pathLength);
+
+                            // add tangent angles
+                            if(getTangent) lengthObj.angles.push(pointAtT(pts, t, true).angle);
+
                         }
+
+                        // end angle
+                        if(getTangent) lengthObj.angles.push(pointAtT(pts, 1, true).angle);
                         lengthObj.points = pts;
                     }
 
@@ -446,6 +541,7 @@
             }
             pathLength += len;
 
+            // ignore M starting point commands
             if (type !== "M") {
                 lengthLookup.segments.push(lengthObj);
             }
@@ -463,7 +559,6 @@
             if (type === 'Z') {
                 lengthObj.com.values = [p.x, p.y];
             }
-
         }
 
 
@@ -552,7 +647,7 @@
                 lgVals[lg] = getLegendreGaussValues(lg)
             }
 
-            wa = lgVals[lg]
+            const wa = lgVals[lg];
             let sum = 0;
 
             for (let i = 0, len = wa.length; i < len; i++) {
@@ -1187,7 +1282,8 @@
         //endAngle = (!sweep && largeArc) ? endAngle - PI * 2 : ((endAngle < 0 && endAngle < startAngle) ? endAngle + PI * 2 : endAngle)
 
 
-        console.log((!sweep && largeArc), (endAngle < startAngle && largeArc))
+        //console.log((!sweep && largeArc), (endAngle < startAngle && largeArc))
+
         //endAngle = (endAngle<0 && startAngle>0 && !largeArc) || (endAngle<startAngle && largeArc)  ? endAngle+PI*2 : endAngle;
         let deltaAngle = endAngle - startAngle
         // correct deltaAngle for half circles only defined by sweep flag
@@ -1206,13 +1302,15 @@
     pathDataLength.getPathDataLength = getPathDataLength;
     pathDataLength.getLength = getLength;
     pathDataLength.parsePathDataNormalized = parsePathDataNormalized;
-    pathDataLength.svgArcToCenterParam = svgArcToCenterParam
-    pathDataLength.getAngle = getAngle
+    pathDataLength.svgArcToCenterParam = svgArcToCenterParam;
+    pathDataLength.getAngle = getAngle;
+    pathDataLength.pointAtT = pointAtT;
+
 
     return pathDataLength;
 });
 
 
 if (typeof module === 'undefined') {
-    var { getPathLengthLookup, getPathLengthFromD, getPathDataLength, getLength, parsePathDataNormalized, svgArcToCenterParam, getAngle } = pathDataLength;
+    var { getPathLengthLookup, getPathLengthFromD, getPathDataLength, getLength, parsePathDataNormalized, svgArcToCenterParam, getAngle, pointAtT } = pathDataLength;
 }
