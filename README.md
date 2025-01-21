@@ -26,6 +26,7 @@ This way you can efficiently calculate hundreds of points on a path without sacr
   + [Path data input](#path-data-input)
   + [Parsing options](#parsing-options)
 * [Accuracy](#accuracy)
+* [Performance](#performance)
 * [Addons](#addons)
   + [polygonFromPathData()](#polygonfrompathdata)
 * [Demos](#demos)
@@ -291,12 +292,17 @@ let pathData_notNormalized = parsePathDataNormalized(d, {toAbsolute:false, toLon
 ## Accuracy
 In fact the native browser methods `getTotalLength()` and `getPointAtlength()` return different results in Firefox, chromium/blink and webkit.   
 
-Compared against reproducible/calculable objects/shapes like circles the methods provided by this library actually provides a more [accurate result](https://stackoverflow.com/questions/30277646/svg-convert-arcs-to-cubic-bezier/77538979#77538979). 
+Compared against reproducible/calculable objects/shapes like **circles** the methods provided by this library actually provide a more [accurate result](https://stackoverflow.com/questions/30277646/svg-convert-arcs-to-cubic-bezier/77538979#77538979). 
 
 Cubic bezier length are approximated using [Legendre-Gauss quadrature](https://pomax.github.io/bezierinfo/legendre-gauss.html) integral approximation
 Weights and Abscissae values are adjusted for long path segments.  
 
 Elliptical Arc `A` commands are converted to cubic approximations. Circular arcs are retained which improves speed and accuracy.
+
+## Performance
+Native `getPointAtLength()` browser implementations aren't well optimized for **recurring** point calculations as they start from scratch on each call (parsing, measuring, calculating point at length). To be fair: there is no trivial length calculation algorithm.  
+
+Since this library stores all important length data segment by segment – subsequent point (or tangent angle) calculations are way faster than the native methods.  
 
 
 ## Addons
