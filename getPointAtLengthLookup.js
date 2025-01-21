@@ -647,7 +647,7 @@
                 lgVals[lg] = getLegendreGaussValues(lg)
             }
 
-            const wa = lgVals[lg];
+            wa = lgVals[lg]
             let sum = 0;
 
             for (let i = 0, len = wa.length; i < len; i++) {
