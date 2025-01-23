@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>motion path test</title>
+
+    <style>
+        svg {
+            display: block;
+            outline: 1px solid #ccc;
+            overflow: visible;
+            max-height: 70vh;
+        }
+    </style>
+
+    <script src="../getPointAtLengthLookup.js" ></script>
+
+</head>
+
+<body>
+
+
+    <!-- 
+    <script src="https://cdn.jsdelivr.net/npm/svg-getpointatlength@latest/getPointAtLengthLookup.js"></script>
+-->
+
+    <!-- 
+
+    
+-->
+
+    <svg viewBox="0 0 110 110">
+        <defs>
+            <path id="motionPathDef" d="M81.71 82.63c-4.02 3.16-8.41-5.26-13.52-3.59s-10.16 17.91-15.14 18.1-2.55-21.85-7.65-23.08-6.91 19.91-11.54 17.23-1.61-20.38-4.21-25.09-10.05 2.53-12.11-2.88 14.63-4.32 14.51-9.96-23.96-13.37-22.83-18.69 19.61 4.02 21.85-.96-8.34-20.11-4.86-24.1 15.6 19.75 20.31 17.77 3.02-23.1 8.03-23.33 4.53 18.37 9.45 20.43 12.01-15.48 16.71-13.06-6.26 14.18-2.91 18.78 12.34-3.78 13.9 1.54-9.72 13.2-9.18 18.68 19.35 2.96 18.12 8.21-21.03 1.24-24.25 5.97 9.34 14.87 5.32 18.03z" fill="none" 
+            />
+        </defs>
+        <use id="motionPathBG" href="#motionPathDef" stroke="#ccc" stroke-dasharray="0 2" stroke-linecap="round" />
+        <use id="motionPath" href="#motionPathDef" stroke="#777" />
+
+        <path id="animatedEl" d="M-2.5 -2.5 2.5 0 -2.5 2.5" stroke="#777" fill="none"/>
+    </svg>
+
+
+    <script>
+
+        let motionPath = document.getElementById("motionPath")
+        let animatedEl = document.getElementById("animatedEl")
+
+        // get path length lookup
+        let d = motionPathDef.getAttribute('d')
+        let pathLengthLookup = getPathLengthLookup(d)
+        let totalLength = pathLengthLookup.totalLength
+        let len = 0
+
+
+        let duration = 15000; 
+        let fps = 60; 
+        let frameDuration = 1000 / fps; 
+        let elapsedTime = 0;
+
+
+        // start animation
+        requestAnimationFrame(animate);
+
+
+        function animate(time) {
+            const progress = elapsedTime / duration;
+
+            // increase length
+            len = progress * totalLength;
+
+            // Ensure it wraps around when progress exceeds 1
+            if (progress >= 1) {
+                elapsedTime = 0; 
+                len = 0;
+            }
+
+            let pt = pathLengthLookup.getPointAtLength(len, true);
+            let degrees = pt.angle * 180 / Math.PI;
+
+            motionPath.setAttribute('stroke-dasharray', `${len} ${totalLength}`);
+            animatedEl.setAttribute("transform", `translate(${pt.x},${pt.y}) rotate(${degrees})`);
+
+            // Advance the elapsed time to maintain frame rate
+            elapsedTime += frameDuration;
+            requestAnimationFrame(animate);
+        }
+
+
+
+
+
+
+    </script>
+
+
+</body>
+
+</html>

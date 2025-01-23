@@ -525,7 +525,11 @@
 
                         //let angleStart = pointAtT(pts, 0, true).angle;
                         if (getTangent) {
-                            let angleStart = lengthLookup.segments[i - 2] ? lengthLookup.segments[i - 2].angles.slice(-1)[0] : pointAtT(pts, 0, true).angle;
+                            //let angleStart = lengthLookup.segments[i - 2] ? lengthLookup.segments[i - 2].angles.slice(-1)[0] : pointAtT(pts, 0, true).angle;
+
+
+                            let angleStart = pointAtT(pts, 0, true).angle
+
                             // add start and end angles
                             lengthObj.angles.push(angleStart, pointAtT(pts, 1, true).angle);
                         }

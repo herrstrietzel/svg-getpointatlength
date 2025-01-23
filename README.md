@@ -51,7 +51,7 @@ or (unpkg.com version)
 <script src="https://www.unpkg.com/svg-getpointatlength@latest/getPointAtLengthLookup.js"></script>
 ```
 
-or minified version (~ 9KB/4KB gzipped) 
+or minified version (~ 12KB/6KB gzipped) 
 ```
 <script src="https://cdn.jsdelivr.net/npm/svg-getpointatlength@latest/getPointAtLengthLookup.min.js"></script>
 ```

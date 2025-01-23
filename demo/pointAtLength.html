@@ -339,7 +339,7 @@
 
                 tangent.setAttribute('x2', pT.x)
                 tangent.setAttribute('y2', pT.y)
-                tangentAngle.textContent = `radians: ${angle}; degrees: ${angle * 180 / Math.PI}`
+                tangentAngle.textContent = `radians: ${+angle.toFixed(3)}; degrees: ${ +(angle * 180 / Math.PI).toFixed(3) }`
 
                 let diffIdeal = resIdeal ? totalLength - resIdeal : 'not specified'
 
