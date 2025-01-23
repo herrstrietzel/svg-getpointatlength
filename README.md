@@ -22,6 +22,9 @@ This way you can efficiently calculate hundreds of points on a path without sacr
   + [Node](#node)
 * [Methods and options](#methods-and-options)  
   + [Options: get tangent angles or segments at point](#options-get-tangent-angles-or-segments-at-point)  
+* [Updates and Versions](#updates-and-versions)
+  + [Changelog](#changelog)
+  + [Downgrading](#downgrading)
 * [How it works](#how-it-works)
   + [Path data input](#path-data-input)
   + [Parsing options](#parsing-options)
@@ -230,7 +233,8 @@ So you also have info about the current segment the length is in as well as the 
 
 ## Updates and Versions
 
-### Latest features
+### Changelog
+* Version 1.1.0 improved performance for recurring point-at-length calculations, fixed tangent calculation bugs and added flat bezier edge cases
 * Version 1.0.15 improved performance for recurring point-at-length calculations
 * Version 1.0.13 added support for **tangent angles** at a specified length/point
 

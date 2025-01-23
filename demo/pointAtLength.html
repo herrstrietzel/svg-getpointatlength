@@ -111,7 +111,7 @@
             <p>
                 <select class="inputs" id="inputQ">
                     <option value="low">low</option>
-                    <option value="medium">medium</option>
+                    <option value="medium" selected>medium</option>
                     <option value="high">high</option>
                 </select>
             </p>
@@ -281,16 +281,11 @@
                 path.setAttribute('d', d)
                 totalLengthN = path.getTotalLength()
 
-                //console.log(path);
-                //let bbP = getBBoxFromD(d)
-
-
-
                 // adjust viewBox
                 let vB = path.getBBox()
-                //console.log(bbP, vB);
-
-                svg.setAttribute('viewBox', [vB.x, vB.y, vB.width, vB.height].join(' '))
+                let w = vB.width || 100
+                let h = vB.height || 100
+                svg.setAttribute('viewBox', [vB.x, vB.y, w, h].join(' '))
 
                 updateLength()
             }
@@ -299,9 +294,6 @@
             function updateLength() {
 
                 // get pathlength lookup
-                //lg = +inputLg.value
-                //lgVal.textContent = lg
-
                 quality = inputQ.value;
                 pathLengthLookup = getPathLengthLookup(d, quality)
                 totalLength = pathLengthLookup.totalLength
@@ -315,18 +307,12 @@
                 //console.log(pathData);
 
                 let area = getPathArea(pathData)
-                //console.log('area', area, Math.PI*10000**2);
-                //console.log('area', area);
-
-
 
                 // only pathLength
                 totalLengthSimple = getPathLengthFromD(d, quality)
-                //console.log('just length', totalLengthSimple);
 
 
                 updatePointAtlength()
-                //console.log(pathLengthLookup);
 
 
             }
@@ -353,17 +339,15 @@
 
                 tangent.setAttribute('x2', pT.x)
                 tangent.setAttribute('y2', pT.y)
-
                 tangentAngle.textContent = `radians: ${angle}; degrees: ${angle * 180 / Math.PI}`
 
-
-
+                let diffIdeal = resIdeal ? totalLength - resIdeal : 'not specified'
 
                 resAcc.innerHTML = `
                 <strong>length:</strong> ${totalLength} <br>
                 <strong>length Native:</strong> ${totalLengthN} <br>
                 <strong>ideal length:</strong> ${resIdeal} <br>
-                <strong>diff from ideal:</strong> ${totalLength - resIdeal} <br>
+                <strong>diff from ideal:</strong> ${diffIdeal} <br>
                 <strong>diff from native:</strong> ${totalLengthN - totalLength} <br>
                 `;
 

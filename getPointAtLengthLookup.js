@@ -26,8 +26,7 @@
 
     // get angle helper
     const getAngle = (p1, p2) => {
-        let angle = Math.atan2(p2.y - p1.y, p2.x - p1.x);
-        return angle;
+        return Math.atan2(p2.y - p1.y, p2.x - p1.x);
     }
 
 
@@ -53,14 +52,17 @@
             return pt
         }
 
-        /**
-        * calculate single points on segments
-        */
-        const getPointAtCubicSegmentT = (p0, cp1, cp2, p, t, getTangent = false) => {
-            let t1 = 1 - t;
+        const getPointAtBezierT = (pts, t, getTangent = false) => {
+
+            let isCubic = pts.length === 4;
+            let p0 = pts[0];
+            let cp1 = pts[1];
+            let cp2 = isCubic ? pts[2] : pts[1];
+            let p = pts[pts.length - 1];
             let pt = { x: 0, y: 0 };
 
             if (getTangent) {
+                let m0, m1, m2, m3, m4;
 
                 if (t === 0) {
                     pt.x = p0.x;
@@ -75,83 +77,69 @@
                 }
 
                 else {
-                    let m0 = interpolate(p0, cp1, t);
-                    let m1 = interpolate(cp1, cp2, t);
-                    let m2 = interpolate(cp2, p, t);
-                    let m3 = interpolate(m0, m1, t);
-                    let m4 = interpolate(m1, m2, t);
-                    pt = interpolate(m3, m4, t);
-                    pt.angle = getAngle(m3, m4)
+                    m0 = interpolate(p0, cp1, t);
+                    if (isCubic) {
+                        m1 = interpolate(cp1, cp2, t);
+                        m2 = interpolate(cp2, p, t);
+                        m3 = interpolate(m0, m1, t);
+                        m4 = interpolate(m1, m2, t);
+                        pt = interpolate(m3, m4, t);
+                        pt.angle = getAngle(m3, m4)
+                    } else {
+                        m1 = interpolate(p0, cp1, t);
+                        m2 = interpolate(cp1, p, t);
+                        pt = interpolate(m1, m2, t);
+                        pt.angle = getAngle(m1, m2)
+
+                    }
                 }
-
-                // normalize negative angles
-                if (pt.angle < 0) pt.angle += Math.PI * 2
-
-            } else {
-                pt = {
-                    x:
-                        t1 ** 3 * p0.x +
-                        3 * t1 ** 2 * t * cp1.x +
-                        3 * t1 * t ** 2 * cp2.x +
-                        t ** 3 * p.x,
-                    y:
-                        t1 ** 3 * p0.y +
-                        3 * t1 ** 2 * t * cp1.y +
-                        3 * t1 * t ** 2 * cp2.y +
-                        t ** 3 * p.y,
-                };
             }
+            // take simplified calculations without tangent angles
+            else {
+                let t1 = 1 - t;
 
-            return pt
-        }
+                // cubic beziers
+                if (isCubic) {
+                    pt = {
+                        x:
+                            t1 ** 3 * p0.x +
+                            3 * t1 ** 2 * t * cp1.x +
+                            3 * t1 * t ** 2 * cp2.x +
+                            t ** 3 * p.x,
+                        y:
+                            t1 ** 3 * p0.y +
+                            3 * t1 ** 2 * t * cp1.y +
+                            3 * t1 * t ** 2 * cp2.y +
+                            t ** 3 * p.y,
+                    };
 
-        const getPointAtQuadraticSegmentT = (p0, cp1, p, t, getTangent = false) => {
-            let t1 = 1 - t;
-            let pt = { x: 0, y: 0 };
-
-            if (getTangent) {
-
-                if (t === 0) {
-                    pt.x = p0.x;
-                    pt.y = p0.y;
-                    pt.angle = getAngle(p0, cp1)
                 }
-
-                else if (t === 1) {
-                    pt.x = p.x;
-                    pt.y = p.y;
-                    pt.angle = getAngle(cp1, p)
-                }
+                // quadratic beziers
                 else {
-                    let m1 = interpolate(p0, cp1, t);
-                    let m2 = interpolate(cp1, p, t);
-
-                    pt = interpolate(m1, m2, t);
-                    pt.angle = getAngle(m1, m2)
+                    pt = {
+                        x: t1 * t1 * p0.x + 2 * t1 * t * cp1.x + t ** 2 * p.x,
+                        y: t1 * t1 * p0.y + 2 * t1 * t * cp1.y + t ** 2 * p.y,
+                    };
                 }
 
-                // normalize negative angles
-                if (pt.angle < 0) pt.angle += Math.PI * 2
-
-            } else {
-                pt = {
-                    x: t1 * t1 * p0.x + 2 * t1 * t * cp1.x + t ** 2 * p.x,
-                    y: t1 * t1 * p0.y + 2 * t1 * t * cp1.y + t ** 2 * p.y,
-                };
             }
+
             return pt
+
         }
 
-        let pt
-        if (pts.length === 4) {
-            pt = getPointAtCubicSegmentT(pts[0], pts[1], pts[2], pts[3], t, getTangent)
+        let pt;
+        if (pts.length > 2) {
+            pt = getPointAtBezierT(pts, t, getTangent);
         }
-        else if (pts.length === 3) {
-            pt = getPointAtQuadraticSegmentT(pts[0], pts[1], pts[2], t, getTangent)
-        }
+
         else {
             pt = interpolate(pts[0], pts[1], t, getTangent)
         }
+
+        // normalize negative angles
+        if (getTangent && pt.angle < 0) pt.angle += Math.PI * 2
+
         return pt
     }
 
@@ -169,7 +157,7 @@
         let { segments, totalLength } = this;
 
         // disable tangents if no angles present in lookup
-        if(!segments[0].angles.length) getSegment = false
+        if (!segments[0].angles.length) getSegment = false
 
         // 1st segment
         let M = segments[0].points[0];
@@ -185,7 +173,6 @@
             pt.index = segments[0].index;
             pt.com = segments[0].com;
         }
-
 
         // first or last point on path
         if (length === 0) {
@@ -256,62 +243,39 @@
                         break;
                     case 'C':
                     case 'Q':
-                        /**
-                         *  cubic or quadratic beziers
-                        */
-                        let l1 = getLength([points[0], points[1]]) + getLength([points[1], points[2]]);
-                        let l2 = type === 'C' ? getLength([points[2], points[3]]) : 0;
-                        let lBase = getLength([points[0], points[points.length - 1]]);
-
-                        // is flat
-                        if (l1 + l2 === lBase) {
-                            diffLength = end - length;
-                            newT = 1 - (1 / total) * diffLength;
-                            pt = newT <= 1 ? pointAtT([points[0], points[2]], newT, getTangent) : points[points.length - 1];
-                            pt.angle = angles[0];
-                        }
 
                         // is curve
-                        else {
-                            for (let i = 0; i < lengths.length && !foundT; i++) {
-                                let lengthAtT = lengths[i];
-                                if (getTangent) pt.angle = angles[0];
+                        for (let i = 0; i < lengths.length && !foundT; i++) {
+                            let lengthAtT = lengths[i];
+                            if (getTangent) pt.angle = angles[0];
 
-                                // first or last point in segment
-                                if (i === 0) {
-                                    pt.x = com.p0.x
-                                    pt.y = com.p0.y
-                                }
-                                else if (lengthAtT === length) {
-                                    pt.x = points[points.length - 1].x
-                                    pt.y = points[points.length - 1].y
-                                }
+                            // first or last point in segment
+                            if (i === 0) {
+                                pt.x = com.p0.x
+                                pt.y = com.p0.y
+                            }
+                            else if (lengthAtT === length) {
+                                pt.x = points[points.length - 1].x
+                                pt.y = points[points.length - 1].y
+                            }
 
-                                // found length at t range
-                                else if (lengthAtT > length && i > 0) {
+                            // found length at t range
+                            else if (lengthAtT > length && i > 0) {
 
-                                    let lengthAtTPrev = i > 0 ? lengths[i - 1] : lengths[i];
+                                let lengthAtTPrev = i > 0 ? lengths[i - 1] : lengths[i];
+                                let t = tStep * i;
+                                // length between previous and current t
+                                let tSegLength = lengthAtT - lengthAtTPrev;
+                                // difference between length at t and exact length
+                                let diffLength = lengthAtT - length;
+                                // ratio between segment length and difference
+                                let tScale = (1 / tSegLength) * diffLength || 0;
+                                newT = t - tStep * tScale || 0;
+                                foundT = true;
 
-                                    let t = tStep * i;
-                                    // length between previous and current t
-                                    let tSegLength = lengthAtT - lengthAtTPrev;
-                                    // difference between length at t and exact length
-                                    let diffLength = lengthAtT - length;
-                                    // ratio between segment length and difference
-                                    let tScale = (1 / tSegLength) * diffLength || 0;
-                                    newT = t - tStep * tScale || 0;
-                                    foundT = true;
+                                // return point and optionally angle
+                                pt = pointAtT(points, newT, getTangent)
 
-                                    // return point and optionally angle
-                                    pt = pointAtT(points, newT)
-
-                                    if (getTangent) {
-                                        //interpolate angle
-                                        let rat = (length - lengthAtTPrev) / (lengthAtT - lengthAtTPrev);
-                                        pt.angle = (angles[i] - angles[i - 1]) * rat + angles[i - 1]
-
-                                    }
-                                }
                             }
                         }
                         break;
@@ -333,9 +297,9 @@
     function getPathLengthLookup(d, precision = 'medium', onlyLength = false, getTangent = true) {
 
         // disable tangent calculation in length-only mode
-        if(onlyLength) getTangent=false;
+        if (onlyLength) getTangent = false;
 
-        const checkFlatnessByPolygonArea = (points) => {
+        const checkFlatnessByPolygonArea = (points, tolerance=0.001) => {
             let area = 0;
             for (let i = 0; i < points.length; i++) {
                 let addX = points[i].x;
@@ -344,7 +308,7 @@
                 let subY = points[i].y;
                 area += addX * addY * 0.5 - subX * subY * 0.5;
             }
-            return Math.abs(area) < 0.01;
+            return Math.abs(area) < tolerance;
         }
 
         /**
@@ -434,7 +398,10 @@
                     len = 2 * Math.PI * rx * (1 / 360 * Math.abs(deltaAngle * 180 / PI))
 
                     if (getTangent) {
-                        lengthObj.angles = [startAngle + Math.PI * 0.5, endAngle + Math.PI * 0.5];
+                        let startA = deltaAngle < 0  ? startAngle - Math.PI : startAngle;
+                        let endA = deltaAngle < 0 ? endAngle - Math.PI : endAngle;
+
+                        lengthObj.angles = [startA + Math.PI * 0.5, endA + Math.PI * 0.5];
                     }
 
                     lengthObj.points = [
@@ -461,8 +428,52 @@
                     // is flat/linear – treat as lineto
                     let isFlat = checkFlatnessByPolygonArea(pts);
 
+                    /** 
+                    * check if controlpoints are outside 
+                    * command bounding box
+                    * to calculate lengths - won't work for quadratic
+                    */
+                    let cpsOutside = false;
+
+                    if (isFlat) {
+                        let top = Math.min(p0.y, p.y)
+                        let left = Math.min(p0.x, p.x)
+                        let right = Math.max(p0.x, p.x)
+                        let bottom = Math.max(p0.y, p.y)
+
+                        if (
+                            cp1.y < top || cp1.y > bottom ||
+                            cp2.y < top || cp2.y > bottom ||
+                            cp1.x < left || cp1.x > right ||
+                            cp2.x < left && cp2.x > right
+                        ) {
+                            cpsOutside = true;
+                            isFlat = false;
+                        }
+                    }
+
+                    // convert quadratic to cubic
+                    if (cpsOutside && type === 'Q') {
+
+                        let cp1N = {
+                            x: p0.x + 2 / 3 * (cp1.x - p0.x),
+                            y: p0.y + 2 / 3 * (cp1.y - p0.y)
+                        }
+                        cp2 = {
+                            x: p.x + 2 / 3 * (cp1.x - p.x),
+                            y: p.y + 2 / 3 * (cp1.y - p.y)
+                        }
+
+                        cp1 = cp1N;
+                        type = 'C';
+                        lengthObj.type = "C";
+                        pts = [p0, cp1, cp2, p];
+                    }
+
+
                     // treat as lineto
                     if (isFlat) {
+
                         pts = [p0, p]
                         len = getLength(pts)
                         lengthObj.type = "L";
@@ -511,21 +522,19 @@
                     if (!onlyLength && !isFlat) {
 
                         // get previous end angle
-                        let angleStart = lengthLookup.segments[i - 2] ? lengthLookup.segments[i - 2].angles.slice(-1)[0] : pointAtT(pts, 0, true).angle;
 
-                        if(getTangent) lengthObj.angles.push(angleStart);
+                        //let angleStart = pointAtT(pts, 0, true).angle;
+                        if (getTangent) {
+                            let angleStart = lengthLookup.segments[i - 2] ? lengthLookup.segments[i - 2].angles.slice(-1)[0] : pointAtT(pts, 0, true).angle;
+                            // add start and end angles
+                            lengthObj.angles.push(angleStart, pointAtT(pts, 1, true).angle);
+                        }
 
                         for (let d = 1; d < tDivisions; d++) {
                             t = (1 / tDivisions) * d;
                             lengthObj.lengths.push(getLength(pts, t, lg) + pathLength);
-
-                            // add tangent angles
-                            if(getTangent) lengthObj.angles.push(pointAtT(pts, t, true).angle);
-
                         }
 
-                        // end angle
-                        if(getTangent) lengthObj.angles.push(pointAtT(pts, 1, true).angle);
                         lengthObj.points = pts;
                     }
 
@@ -777,6 +786,8 @@
             let isRel = type === typeRel;
             let chunkSize = comLengths[typeRel];
 
+            //console.log(typeRel);
+
             // split values to array
             let values = com.substring(1, com.length)
                 .trim()
@@ -839,6 +850,7 @@
 
             // no relative, shorthand or arc command - return current 
             if (!hasRelative && !hasShorthands && !hasArcs) {
+
                 comChunks.forEach((com) => {
                     pathData.push(com);
                 });
@@ -950,7 +962,6 @@
                         if (type === 'M') {
                             M = { x: values[0], y: values[1] };
                         }
-
                     }
 
                     /**
@@ -979,6 +990,7 @@
                         }
                     }
 
+
                     /**
                      * convert arcs if elliptical
                      */
@@ -1005,7 +1017,6 @@
                             }
                         }
                     }
-
                     else {
                         // add to pathData array
                         pathData.push(com);
@@ -1027,7 +1038,8 @@
                     offX = lastX;
                     offY = lastY;
                 }
-            }
+            } // end toAbsolute
+
         }
 
 
@@ -1038,6 +1050,7 @@
          */
         pathData[0].type = "M";
         return pathData;
+
 
         /** 
          * convert arctocommands to cubic bezier
@@ -1180,9 +1193,6 @@
     * based on @cuixiping;
     * https://stackoverflow.com/questions/9017100/calculate-center-of-svg-arc/12329083#12329083
     */
-
-
-
     function svgArcToCenterParam(x1, y1, rx, ry, xAxisRotation, largeArc, sweep, x2, y2) {
 
         let { cos, sin, atan2, sqrt, abs, min, max, PI } = Math;
@@ -1279,17 +1289,8 @@
         let endAngle = getAngle(cx, cy, x2, y2);
         //console.log('start:', startAngle, 'end:', endAngle)
         endAngle = (!sweep && largeArc) ? endAngle - PI * 2 : ((endAngle < startAngle && largeArc) || (endAngle < 0 && endAngle < startAngle) ? endAngle + PI * 2 : endAngle)
-        //endAngle = (!sweep && largeArc) ? endAngle - PI * 2 : ((endAngle < 0 && endAngle < startAngle) ? endAngle + PI * 2 : endAngle)
 
-
-        //console.log((!sweep && largeArc), (endAngle < startAngle && largeArc))
-
-        //endAngle = (endAngle<0 && startAngle>0 && !largeArc) || (endAngle<startAngle && largeArc)  ? endAngle+PI*2 : endAngle;
         let deltaAngle = endAngle - startAngle
-        // correct deltaAngle for half circles only defined by sweep flag
-        //deltaAngle = !sweep && deltaAngle===Math.PI ? deltaAngle*-1 : deltaAngle
-
-        //let deltaAngle = largeArc ? 360 + 
         arcData.startAngle = startAngle;
         arcData.endAngle = endAngle;
         arcData.deltaAngle = deltaAngle;

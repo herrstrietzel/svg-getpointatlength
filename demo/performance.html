@@ -240,9 +240,16 @@
             d = svgInput.value;
             path.setAttribute("d", d);
 
+
             // adjust viewBox
-            let vB = path.getBBox();
-            svg.setAttribute("viewBox", [vB.x, vB.y, vB.width, vB.height].join(" "));
+            let vB = path.getBBox()
+            let w = vB.width || 100
+            let h = vB.height || 100
+            svg.setAttribute('viewBox', [vB.x, vB.y, w, h].join(' '))
+
+
+
+
             //updateLength()
             testPerf();
             checkLibraryRendering()

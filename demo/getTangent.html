@@ -12,11 +12,17 @@
 
     <script src="https://cdn.jsdelivr.net/npm/svg-getpointatlength@latest/getPointAtLengthLookup.js"></script>
 
+    <script src="../getPointAtLengthLookup_back.js"></script>
+
+
+    <script src="https://cdn.jsdelivr.net/npm/svg-getpointatlength@latest/getPointAtLengthLookup.js"></script>
 
     -->
 
 
     <script src="../getPointAtLengthLookup.js"></script>
+
+
 
 
 
@@ -95,46 +101,16 @@
 <body>
 
 
-    <!-- 
-    M10 50q100 0 100 100 q0 100 -100 100
-
-
-   m 50 0        
-        Q 36.4 0 24.8 6.8        
-        t -18 18         
-        t -6.8 25.2         
-        C 0 63.8 5.6 76.3 14.65 85.35         
-        s 21.55 14.65 35.35 14.65      
-
-        a 50 25 -45 0115.8 -34.3
-         50 25 -45 0134.2 -25.7
-         
-        h -20-.5         
-        v -12.5-12.5         
-        H 75 50         
-        V 0   
-        z     
-
-        M 40 60 
-        h-20 
-        V 20
-        h 18 .5.5.5.5
-         z 
-
-    -->
-
     <svg id="svg" viewBox="0 100 80 100">
         <path id="path" class="previewPath" d=" 
-        
-        M 70 25 
-        A 5 10 45 1 0 40 20
+
+        M  529 664  C  93 290  616 93  1942 385  C  1014 330  147 720  2059 70  C  1307 400  278 713  1686 691         
 
         " />
         <path id="segAtPoint" d="" fill="none" stroke="green" stroke-width="3%" stroke-opacity="0.5" />
 
         <!-- tangent angle indicator -->
         <line id="tangent" x1="0" y1="0" x2="0" y2="0" stroke="green" stroke-width="1%" />
-
 
     </svg>
 
@@ -150,7 +126,7 @@
 
         let pathLengthLookup = getPathLengthLookup(d, quality, lengthOnly, getTangent )
         let totalLength = pathLengthLookup.totalLength
-        let steps = 5
+        let steps = 100
         let step = totalLength / steps
 
         //let angles = []
@@ -162,14 +138,8 @@
         svg.setAttribute('viewBox', [vB.x, vB.y, vB.width, vB.height].join(' '))
 
 
-
-
-
-
         // interpolated angles
-        
         perfStart();
-        steps = 10
         step = totalLength / steps
         for (let i = 0; i <= steps; i++) {
 
@@ -178,15 +148,11 @@
 
             let pt = pathLengthLookup.getPointAtLength(step * i, true);
 
-            //renderPoint(svg, pt)
-            //angles.push( {len: step * i, ang: pt.angle } )
-            //renderTangent(svg, pt, pt.angle- Math.PI * 0.5 )
+            renderTangent(svg, pt, pt.angle- Math.PI * 0.5, 'green', '0.5%',  step  )
         }
 
         perfEnd();
         
-
-
 
 
         function renderTangent(svg, pt, angle = 0, stroke = "green", strokeWidth = "0.5%", len = 10, render = true) {
