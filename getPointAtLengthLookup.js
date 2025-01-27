@@ -1,4 +1,4 @@
-/* v 1.2.0 */
+/* v 1.2.1 */
 (function (root, factory) {
     if (typeof module !== 'undefined' && module.exports) {
         // CommonJS (Node.js) environment
@@ -100,20 +100,26 @@
 
             if (getTangent) {
                 let m0, m1, m2, m3, m4;
+                let shortCp1 = p0.x===cp1.x && p0.y===cp1.y;
+                let shortCp2 = p.x===cp2.x && p.y===cp2.y;
 
-                if (t === 0) {
+                if (t === 0 && !shortCp1 ) {
                     pt.x = p0.x;
                     pt.y = p0.y;
                     pt.angle = getAngle(p0, cp1)
                 }
 
-                else if (t === 1) {
+                else if (t === 1 && !shortCp2) {
                     pt.x = p.x;
                     pt.y = p.y;
                     pt.angle = getAngle(cp2, p)
                 }
 
                 else {
+                    // adjust if cps are on start or end point
+                    if(shortCp1) t+=0.0000001;
+                    if(shortCp2) t-=0.0000001;
+
                     m0 = interpolate(p0, cp1, t);
                     if (isCubic) {
                         m1 = interpolate(cp1, cp2, t);
@@ -130,6 +136,9 @@
 
                     }
                 }
+
+                console.log('pt.angle', pt.angle, shortCp1, shortCp2);
+
             }
             // take simplified calculations without tangent angles
             else {
@@ -736,6 +745,10 @@
 
                         if (getTangent) {
                             let angleStart = pointAtT(pts, 0, true).angle
+
+                            //console.log('angleStart', angleStart);
+
+                            //&& (p0.x!==cp1.x && p0.y!==cp1.y)
 
                             // add only start and end angles for béziers
                             lengthObj.angles.push(angleStart, pointAtT(pts, 1, true).angle);
