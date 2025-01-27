@@ -356,6 +356,7 @@ let vertices = polygonFromPathData(pathData, options)
 * [path to polygon](https://codepen.io/herrstrietzel/pen/XWGddRm)
 * [get length at point](https://codepen.io/herrstrietzel/pen/yyBKbNV)
 * [point ant tangent angle on motion-path](https://codepen.io/herrstrietzel/pen/zxOmRYX?editors=1010)
+* [scroll path](https://codepen.io/herrstrietzel/pen/qEWLaZx)
 
 (See also demos folder)  
 
