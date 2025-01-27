@@ -137,8 +137,6 @@
                     }
                 }
 
-                console.log('pt.angle', pt.angle, shortCp1, shortCp2);
-
             }
             // take simplified calculations without tangent angles
             else {
