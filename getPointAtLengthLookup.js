@@ -1,4 +1,4 @@
-
+/* v 1.2.0 */
 (function (root, factory) {
     if (typeof module !== 'undefined' && module.exports) {
         // CommonJS (Node.js) environment
@@ -13,20 +13,58 @@
 })(this, function () {
     var pathDataLength = {};
 
+    const { abs, acos, atan, atan2, cos, sin, log, max, min, sqrt, tan, PI, pow } = Math;
 
-    const { PI, sin, cos, acos, abs, sqrt, log, tan } = Math;
-
-    // Legendre Gauss weight and abissae values
+    // Legendre Gauss weight and abscissa values
     const lgVals = {
-
-        wa12: [[0.24914704581340288, 0.12523340851146894], [0.23349253653835458, 0.3678314989981802], [0.20316742672306584, 0.5873179542866175], [0.16007832854334633, 0.7699026741943047], [0.10693932599531818, 0.9041172563704748], [0.04717533638650846, 0.9815606342467192]],
-
-        wa24: [[0.1279381953467522, 0.0640568928626056], [0.1258374563468283, 0.1911188674736163], [0.1216704729278034, 0.3150426796961634], [0.1155056680537256, 0.4337935076260451], [0.1074442701159656, 0.5454214713888396], [0.0976186521041139, 0.6480936519369755], [0.0861901615319533, 0.7401241915785544], [0.0733464814110803, 0.820001985973903], [0.0592985849154368, 0.8864155270044011], [0.0442774388174198, 0.9382745520027328], [0.0285313886289337, 0.9747285559713095], [0.0123412297999872, 0.9951872199970213]]
+        24: [[0.1279381953467522, 0.0640568928626056], [0.1258374563468283, 0.1911188674736163], [0.1216704729278034, 0.3150426796961634], [0.1155056680537256, 0.4337935076260451], [0.1074442701159656, 0.5454214713888396], [0.0976186521041139, 0.6480936519369755], [0.0861901615319533, 0.7401241915785544], [0.0733464814110803, 0.820001985973903], [0.0592985849154368, 0.8864155270044011], [0.0442774388174198, 0.9382745520027328], [0.0285313886289337, 0.9747285559713095], [0.0123412297999872, 0.9951872199970213]]
     }
+
+    // LG weight/abscissae generator
+    const getLegendreGaussValues = (n, x1 = -1, x2 = 1) => {
+        //console.log('add new LG', n);
+
+        let waArr = []
+        let z1, z, xm, xl, pp, p3, p2, p1;
+        const m = (n + 1) >> 1;
+        xm = 0.5 * (x2 + x1);
+        xl = 0.5 * (x2 - x1);
+
+        for (let i = m - 1; i >= 0; i--) {
+            z = cos((PI * (i + 0.75)) / (n + 0.5));
+            do {
+                p1 = 1;
+                p2 = 0;
+                for (let j = 0; j < n; j++) {
+                    //Loop up the recurrence relation to get the Legendre polynomial evaluated at z.
+                    p3 = p2;
+                    p2 = p1;
+                    p1 = ((2 * j + 1) * z * p2 - j * p3) / (j + 1);
+                }
+
+                pp = (n * (z * p1 - p2)) / (z * z - 1);
+                z1 = z;
+                z = z1 - p1 / pp; //Newton’s method
+
+            } while (abs(z - z1) > 1.0e-14);
+
+            let weight = (2 * xl) / ((1 - z * z) * pp * pp);
+            let abscissa = xm + xl * z;
+
+            waArr.push(
+                [weight, -abscissa],
+                [weight, abscissa],
+            )
+        }
+
+        return waArr;
+    }
+
+
 
     // get angle helper
     const getAngle = (p1, p2) => {
-        return Math.atan2(p2.y - p1.y, p2.x - p1.x);
+        return atan2(p2.y - p1.y, p2.x - p1.x);
     }
 
 
@@ -46,7 +84,7 @@
                 pt.angle = getAngle(p1, p2)
 
                 // normalize negative angles
-                if (pt.angle < 0) pt.angle += Math.PI * 2
+                if (pt.angle < 0) pt.angle += PI * 2
             }
 
             return pt
@@ -138,7 +176,7 @@
         }
 
         // normalize negative angles
-        if (getTangent && pt.angle < 0) pt.angle += Math.PI * 2
+        if (getTangent && pt.angle < 0) pt.angle += PI * 2
 
         return pt
     }
@@ -160,13 +198,43 @@
         if (!segments[0].angles.length) getSegment = false
 
         // 1st segment
-        let M = segments[0].points[0];
-        let angle0 = segments[0].angles[0]
+        let seg0 = segments[0];
+        let seglast = segments[segments.length - 1];
+        let M = seg0.points[0];
+        let angle0 = seg0.angles[0]
+        angle0 = angle0 < 0 ? angle0 + PI * 2 : angle0;
 
         let newT = 0;
         let foundSegment = false;
         let pt = { x: M.x, y: M.y };
-        if (getTangent) pt.angle = angle0
+
+        // tangent angles for Arcs
+        let tangentAngle, rx, ry, xAxisRotation, deltaAngle, perpendicularAdjust;
+
+
+        if (getTangent) {
+            pt.angle = angle0;
+
+            if (seg0.type === 'A') {
+
+                ({ rx, ry, xAxisRotation, deltaAngle } = seg0.points[1]);
+
+                if (rx !== ry) {
+
+                    // adjust for clockwise or counter clockwise
+                    perpendicularAdjust = deltaAngle < 0 ? PI * -0.5 : PI * 0.5;
+
+                    // calulate tangent angle
+                    tangentAngle = getTangentAngle(rx, ry, angle0) - xAxisRotation;
+
+                    // adjust for axis rotation
+                    tangentAngle = xAxisRotation ? tangentAngle + perpendicularAdjust : tangentAngle;
+                    pt.angle = tangentAngle;
+
+                }
+            }
+
+        }
 
         // return segment data
         if (getSegment) {
@@ -179,13 +247,31 @@
             return pt;
         }
         else if (length === totalLength) {
-            let seglast = segments[segments.length - 1]
             let ptLast = seglast.points.slice(-1)[0]
             let angleLast = seglast.angles.slice(-1)[0]
 
             pt.x = ptLast.x;
             pt.y = ptLast.y;
-            if (getTangent) pt.angle = angleLast;
+
+            if (getTangent) {
+                pt.angle = angleLast;
+
+                if (seglast.type === 'A') {
+                    ({ rx, ry, xAxisRotation } = seglast.points[1]);
+                    if (rx !== ry) {
+
+                        // calulate tangent angle
+                        tangentAngle = getTangentAngle(rx, ry, angleLast) - xAxisRotation;
+
+                        // adjust for clockwise or counter clockwise
+                        perpendicularAdjust = deltaAngle < 0 ? PI * -0.5 : PI * 0.5;
+
+                        // adjust for axis rotation
+                        tangentAngle = xAxisRotation ? tangentAngle + perpendicularAdjust : tangentAngle;
+                        pt.angle = tangentAngle;
+                    }
+                }
+            }
 
             if (getSegment) {
                 pt.index = segments.length - 1;
@@ -195,6 +281,7 @@
         }
 
         //loop through segments
+
         for (let i = 0; i < segments.length && !foundSegment; i++) {
             let segment = segments[i];
             let { type, lengths, points, total, angles, com } = segment;
@@ -220,25 +307,71 @@
                     case 'A':
 
                         diffLength = end - length;
-                        newT = 1 - (1 / total) * diffLength;
-                        let { cx, cy, startAngle, endAngle, deltaAngle } = segment.points[1]
-                        let newAngle = -deltaAngle * newT
 
-                        // rotate point
-                        let cosA = Math.cos(newAngle);
-                        let sinA = Math.sin(newAngle);
-                        p0 = segment.points[0]
+                        let { rx, ry, cx, cy, startAngle, endAngle, deltaAngle, xAxisRotation } = segment.points[1];
 
-                        pt = {
-                            x: (cosA * (p0.x - cx)) + (sinA * (p0.y - cy)) + cx,
-                            y: (cosA * (p0.y - cy)) - (sinA * (p0.x - cx)) + cy
+                        // is ellipse
+                        if (rx !== ry) {
+
+                            // adjust for clockwise or counter clockwise
+                            perpendicularAdjust = deltaAngle < 0 ? PI * -0.5 : PI * 0.5;
+
+
+                            for (let i = 1; i < lengths.length && !foundT; i++) {
+                                let lengthN = lengths[i];
+
+                                if (length < lengthN) {
+                                    // length is in this range
+                                    foundT = true;
+                                    let lengthPrev = lengths[i - 1]
+                                    let lengthSeg = lengthN - lengthPrev;
+                                    let lengthDiff = lengthN - length;
+
+                                    let rat = (1 / lengthSeg) * lengthDiff || 1;
+                                    let anglePrev = angles[i - 1];
+                                    let angle = angles[i];
+
+                                    // interpolated angle
+                                    let angleI = (anglePrev - angle) * rat + angle;
+
+                                    // get point on ellipse
+                                    pt = getPointOnEllipse(cx, cy, rx, ry, angleI, xAxisRotation, false, false);
+
+                                    // calulate tangent angle
+                                    tangentAngle = getTangentAngle(rx, ry, angleI) - xAxisRotation;
+
+                                    // adjust for axis rotation
+                                    tangentAngle = xAxisRotation ? tangentAngle + perpendicularAdjust : tangentAngle
+
+                                    // return angle
+                                    pt.angle = tangentAngle;
+
+                                }
+                            }
+
+
+                        } else {
+
+                            newT = 1 - (1 / total) * diffLength;
+                            let newAngle = -deltaAngle * newT;
+
+                            // rotate point
+                            let cosA = cos(newAngle);
+                            let sinA = sin(newAngle);
+                            p0 = segment.points[0]
+
+                            pt = {
+                                x: (cosA * (p0.x - cx)) + (sinA * (p0.y - cy)) + cx,
+                                y: (cosA * (p0.y - cy)) - (sinA * (p0.x - cx)) + cy
+                            }
+
+                            // angle
+                            if (getTangent) {
+                                let angleOff = deltaAngle > 0 ? PI / 2 : PI / -2;
+                                pt.angle = startAngle + (deltaAngle * newT) + angleOff
+                            }
                         }
 
-                        // angle
-                        if (getTangent) {
-                            let angleOff = deltaAngle > 0 ? Math.PI / 2 : Math.PI / -2;
-                            pt.angle = startAngle + (deltaAngle * newT) + angleOff
-                        }
 
                         break;
                     case 'C':
@@ -262,17 +395,21 @@
                             // found length at t range
                             else if (lengthAtT > length && i > 0) {
 
+                                foundT = true;
+
                                 let lengthAtTPrev = i > 0 ? lengths[i - 1] : lengths[i];
                                 let t = tStep * i;
+
                                 // length between previous and current t
                                 let tSegLength = lengthAtT - lengthAtTPrev;
                                 // difference between length at t and exact length
                                 let diffLength = lengthAtT - length;
+
+
                                 // ratio between segment length and difference
                                 let tScale = (1 / tSegLength) * diffLength || 0;
                                 newT = t - tStep * tScale || 0;
-                                foundT = true;
-
+                                
                                 // return point and optionally angle
                                 pt = pointAtT(points, newT, getTangent)
 
@@ -299,16 +436,16 @@
         // disable tangent calculation in length-only mode
         if (onlyLength) getTangent = false;
 
-        const checkFlatnessByPolygonArea = (points, tolerance=0.001) => {
+        const checkFlatnessByPolygonArea = (points, tolerance = 0.001) => {
             let area = 0;
-            for (let i = 0; i < points.length; i++) {
+            for (let i = 0, len = points.length; len && i < len; i++) {
                 let addX = points[i].x;
                 let addY = points[i === points.length - 1 ? 0 : i + 1].y;
                 let subX = points[i === points.length - 1 ? 0 : i + 1].x;
                 let subY = points[i].y;
                 area += addX * addY * 0.5 - subX * subY * 0.5;
             }
-            return Math.abs(area) < tolerance;
+            return abs(area) < tolerance;
         }
 
         /**
@@ -325,10 +462,10 @@
 
         // get pathdata
         let pathData = Array.isArray(d) ? d : parsePathDataNormalized(d, { arcAccuracy: arcAccuracy });
-
         let pathLength = 0;
         let M = pathData[0];
         let lengthLookup = { totalLength: 0, segments: [] };
+        let wa;
 
 
         for (let i = 1; i < pathData.length; i++) {
@@ -341,7 +478,8 @@
             let { type, values } = com;
             let valuesL = values.length;
             let p = { x: values[valuesL - 2], y: values[valuesL - 1] };
-            let len, cp1, cp2, t, angle;
+            let cp1, cp2, t, angle;
+            let len = 0;
 
 
             // collect segment data in object
@@ -354,6 +492,9 @@
                 points: [],
                 angles: [],
                 total: 0,
+                lastSeg: 0,
+                lastSub: 0,
+                lastLength: 0
             };
 
             // interpret closePath as lineto
@@ -376,10 +517,9 @@
                     lengthObj.points.push(p0, p);
 
                     if (getTangent) {
-                        angle = Math.atan2(p.y - p0.y, p.x - p0.x)
+                        angle = atan2(p.y - p0.y, p.x - p0.x)
                         lengthObj.angles.push(angle);
                     }
-
                     break;
 
                 case "A":
@@ -387,22 +527,93 @@
                         x: com.values[5],
                         y: com.values[6]
                     }
-                    let largeArc = com.values[3],
+                    let xAxisRotation = com.values[2],
+                        largeArc = com.values[3],
                         sweep = com.values[4];
 
                     // get parametrized arc properties
                     let arcData = svgArcToCenterParam(p0.x, p0.y, com.values[0], com.values[1], com.values[2], largeArc, sweep, p.x, p.y)
-                    let { cx, cy, rx, startAngle, endAngle, deltaAngle } = arcData
+                    let { cx, cy, rx, ry, startAngle, endAngle, deltaAngle } = arcData
 
-                    // get arc length: perfect circle length linearly interpolated according to delta angle
-                    len = 2 * Math.PI * rx * (1 / 360 * Math.abs(deltaAngle * 180 / PI))
 
-                    if (getTangent) {
-                        let startA = deltaAngle < 0  ? startAngle - Math.PI : startAngle;
-                        let endA = deltaAngle < 0 ? endAngle - Math.PI : endAngle;
+                    /** 
+                     * if arc is elliptic
+                     */
+                    if (rx !== ry) {
 
-                        lengthObj.angles = [startA + Math.PI * 0.5, endA + Math.PI * 0.5];
+                        // start and end angles are parametrized
+                        let convertParametricAngle = false;
+
+                        // values are alredy in radians
+                        let degrees = false;
+
+                        // add weight/abscissa values if not existent
+                        let wa_key = `wa${lg}`;
+                        if (!lgVals[wa_key]) {
+                            console.log('lg', lg);
+                            lgVals[wa_key] = getLegendreGaussValues(lg)
+                        }
+
+                        wa = lgVals[wa_key];
+
+                        /** 
+                         * convert angles to parametric
+                         * adjusted for xAxisRotation
+                         * increases performance
+                         */
+
+                        // convert x-axis-rotation to radians
+                        xAxisRotation = xAxisRotation * PI / 180;
+                        startAngle = toParametricAngle((startAngle - xAxisRotation), rx, ry)
+                        endAngle = toParametricAngle((endAngle - xAxisRotation), rx, ry)
+
+                        // adjust end angle
+                        if (startAngle > endAngle) {
+                            endAngle += PI * 2
+                        }
+
+                        // precision
+                        let lenNew = 0;
+
+                        // first length and angle
+                        lengthObj.lengths.push(pathLength);
+                        lengthObj.angles.push(startAngle);
+
+                        for (let i = 1; i < tDivisionsC; i++) {
+                            let endAngle = startAngle + deltaAngle / tDivisionsC * i;
+                            lenNew = getEllipseLengthLG(rx, ry, startAngle, endAngle, 0, convertParametricAngle, degrees, wa);
+
+                            len += lenNew;
+                            lengthObj.lengths.push(lenNew + pathLength)
+                            lengthObj.angles.push(endAngle)
+                        }
+
+                        // last angle
+                        lengthObj.angles.push(endAngle);
+
+                        // last length
+                        len = getEllipseLengthLG(rx, ry, startAngle, endAngle, 0, convertParametricAngle, degrees, wa);
+
                     }
+                    // circular arc
+                    else {
+
+                        /** 
+                         * get arc length: 
+                         * perfect circle length can be linearly interpolated 
+                         * according to delta angle
+                         */
+                        len = 2 * PI * rx * (1 / 360 * abs(deltaAngle * 180 / PI))
+
+                        if (getTangent) {
+                            let startA = deltaAngle < 0 ? startAngle - PI : startAngle;
+                            let endA = deltaAngle < 0 ? endAngle - PI : endAngle;
+
+                            // save only start and end angle
+                            lengthObj.angles = [startA + PI * 0.5, endA + PI * 0.5];
+                        }
+                    }
+
 
                     lengthObj.points = [
                         p0,
@@ -410,6 +621,9 @@
                             startAngle: startAngle,
                             deltaAngle: deltaAngle,
                             endAngle: endAngle,
+                            xAxisRotation: xAxisRotation,
+                            rx: rx,
+                            ry: ry,
                             cx: cx,
                             cy: cy
                         }, p];
@@ -436,10 +650,10 @@
                     let cpsOutside = false;
 
                     if (isFlat) {
-                        let top = Math.min(p0.y, p.y)
-                        let left = Math.min(p0.x, p.x)
-                        let right = Math.max(p0.x, p.x)
-                        let bottom = Math.max(p0.y, p.y)
+                        let top = min(p0.y, p.y)
+                        let left = min(p0.x, p.x)
+                        let right = max(p0.x, p.x)
+                        let bottom = max(p0.y, p.y)
 
                         if (
                             cp1.y < top || cp1.y > bottom ||
@@ -471,7 +685,7 @@
                     }
 
 
-                    // treat as lineto
+                    // treat flat bézier as  lineto
                     if (isFlat) {
 
                         pts = [p0, p]
@@ -479,7 +693,7 @@
                         lengthObj.type = "L";
                         lengthObj.points.push(p0, p);
                         if (getTangent) {
-                            angle = Math.atan2(p.y - p0.y, p.x - p0.x)
+                            angle = atan2(p.y - p0.y, p.x - p0.x)
                             lengthObj.angles.push(angle);
                         }
                         break;
@@ -498,7 +712,7 @@
 
                             let lenNew;
                             let foundAccuracy = false
-                            let tol = 0.05
+                            let tol = 0.001
                             let diff = 0;
 
                             for (let i = 1; i < lgArr.length && !foundAccuracy; i++) {
@@ -521,16 +735,10 @@
 
                     if (!onlyLength && !isFlat) {
 
-                        // get previous end angle
-
-                        //let angleStart = pointAtT(pts, 0, true).angle;
                         if (getTangent) {
-                            //let angleStart = lengthLookup.segments[i - 2] ? lengthLookup.segments[i - 2].angles.slice(-1)[0] : pointAtT(pts, 0, true).angle;
-
-
                             let angleStart = pointAtT(pts, 0, true).angle
 
-                            // add start and end angles
+                            // add only start and end angles for béziers
                             lengthObj.angles.push(angleStart, pointAtT(pts, 1, true).angle);
                         }
 
@@ -594,6 +802,11 @@
         return getPathLengthLookup(pathData, lg, true)
     }
 
+    /**
+     * lenght calculation
+     * helper for
+     * lines, quadratic or cubic béziers
+     */
     function getLength(pts, t = 1, lg = 0) {
 
         const lineLength = (p1, p2) => {
@@ -611,36 +824,6 @@
                 return 0;
             }
 
-            const getLegendreGaussValues = (n, x1 = -1, x2 = 1) => {
-                let waArr = []
-                let z1, z, xm, xl, pp, p3, p2, p1;
-                const m = (n + 1) >> 1;
-                xm = 0.5 * (x2 + x1);
-                xl = 0.5 * (x2 - x1);
-
-                for (let i = m - 1; i >= 0; i--) {
-                    z = cos((PI * (i + 0.75)) / (n + 0.5));
-                    do {
-                        p1 = 1;
-                        p2 = 0;
-                        for (let j = 0; j < n; j++) {
-                            //Loop up the recurrence relation to get the Legendre polynomial evaluated at z.
-                            p3 = p2;
-                            p2 = p1;
-                            p1 = ((2 * j + 1) * z * p2 - j * p3) / (j + 1);
-                        }
-
-                        pp = (n * (z * p1 - p2)) / (z * z - 1);
-                        z1 = z;
-                        z = z1 - p1 / pp; //Newton’s method
-
-                    } while (abs(z - z1) > 1.0e-14);
-                    waArr.push([(2 * xl) / ((1 - z * z) * pp * pp), xm + xl * z])
-                }
-                return waArr;
-            }
-
-
             const base3 = (t, p1, p2, p3, p4) => {
                 let t1 = -3 * p1 + 9 * p2 - 9 * p3 + 3 * p4,
                     t2 = t * t1 + 6 * p1 - 12 * p2 + 6 * p3;
@@ -651,34 +834,29 @@
 
             /**
              * set higher legendre gauss weight abscissae values 
-             * by more accurate weight/abscissa  lookups 
+             * by more accurate weight/abscissae lookups 
              * https://pomax.github.io/bezierinfo/legendre-gauss.html
              */
 
-            // add values if not existent
-            if (!lgVals[lg]) {
-                lgVals[lg] = getLegendreGaussValues(lg)
-            }
+            // generate values if not existent
 
-            const wa = lgVals[lg];
+            let wa_key = `wa${lg}`;
+            if (!lgVals[wa_key]) lgVals[wa_key] = getLegendreGaussValues(lg)
+
+            const wa = lgVals[wa_key];
             let sum = 0;
 
             for (let i = 0, len = wa.length; i < len; i++) {
                 // weight and abscissae 
                 let [w, a] = [wa[i][0], wa[i][1]];
                 let ct1_t = t2 * a;
-                let ct1 = ct1_t + t2;
                 let ct0 = -ct1_t + t2;
 
                 let xbase0 = base3(ct0, p0.x, cp1.x, cp2.x, p.x)
                 let ybase0 = base3(ct0, p0.y, cp1.y, cp2.y, p.y)
                 let comb0 = xbase0 * xbase0 + ybase0 * ybase0;
 
-                let xbase1 = base3(ct1, p0.x, cp1.x, cp2.x, p.x)
-                let ybase1 = base3(ct1, p0.y, cp1.y, cp2.y, p.y)
-                let comb1 = xbase1 * xbase1 + ybase1 * ybase1;
-
-                sum += w * sqrt(comb0) + w * sqrt(comb1)
+                sum += w * sqrt(comb0)
 
             }
             return t2 * sum;
@@ -745,7 +923,7 @@
      * the core function to parse the pathData array from a d string
      **/
 
-    function parsePathDataNormalized(d, options = {}) {
+    function parsePathDataNormalized(d, { toAbsolute = true, toLonghands = true } = {}) {
 
         d = d
             // remove new lines, tabs an comma with whitespace
@@ -764,17 +942,6 @@
         // valid command value lengths
         let comLengths = { m: 2, a: 7, c: 6, h: 1, l: 2, q: 4, s: 4, t: 2, v: 1, z: 0 };
 
-        options = {
-            ...{
-                toAbsolute: true,
-                toLonghands: true,
-                arcToCubic: false,
-                arcAccuracy: 4,
-            },
-            ...options
-        }
-
-        let { toAbsolute, toLonghands, arcToCubic, arcAccuracy } = options;
         let hasArcs = /[a]/gi.test(d);
         let hasShorthands = toLonghands ? /[vhst]/gi.test(d) : false;
         let hasRelative = toAbsolute ? /[lcqamts]/g.test(d.substring(1, d.length - 1)) : false;
@@ -790,7 +957,6 @@
             let isRel = type === typeRel;
             let chunkSize = comLengths[typeRel];
 
-            //console.log(typeRel);
 
             // split values to array
             let values = com.substring(1, com.length)
@@ -994,37 +1160,9 @@
                         }
                     }
 
+                    // add to pathData array
+                    pathData.push(com);
 
-                    /**
-                     * convert arcs if elliptical
-                     */
-                    let isElliptic = false;
-
-                    if (hasArcs && com.type === 'A') {
-
-                        p0 = { x: lastX, y: lastY }
-                        if (typeRel === 'a') {
-                            isElliptic = com.values[0] === com.values[1] ? false : true;
-
-                            if (isElliptic || arcToCubic) {
-                                //let originalCom = {type:'A', values: com.values, p0:p0 }
-                                let comArc = arcToBezier(p0, com.values, arcAccuracy)
-                                comArc.forEach(seg => {
-                                    // save original command data
-                                    seg.index = c;
-                                    seg.com = { type: 'A', values: com.values, p0: p0 };
-                                    pathData.push(seg);
-                                })
-
-                            } else {
-                                pathData.push(com);
-                            }
-                        }
-                    }
-                    else {
-                        // add to pathData array
-                        pathData.push(com);
-                    }
 
                     // update offsets
                     lastX =
@@ -1055,151 +1193,14 @@
         pathData[0].type = "M";
         return pathData;
 
-
-        /** 
-         * convert arctocommands to cubic bezier
-         * based on puzrin's a2c.js
-         * https://github.com/fontello/svgpath/blob/master/lib/a2c.js
-         * returns pathData array
-        */
-
-        function arcToBezier(p0, values, splitSegments = 1) {
-            const TAU = PI * 2;
-            let [rx, ry, rotation, largeArcFlag, sweepFlag, x, y] = values;
-
-            if (rx === 0 || ry === 0) {
-                return []
-            }
-
-            let phi = rotation ? rotation * TAU / 360 : 0;
-            let sinphi = phi ? sin(phi) : 0
-            let cosphi = phi ? cos(phi) : 1
-            let pxp = cosphi * (p0.x - x) / 2 + sinphi * (p0.y - y) / 2
-            let pyp = -sinphi * (p0.x - x) / 2 + cosphi * (p0.y - y) / 2
-
-            if (pxp === 0 && pyp === 0) {
-                return []
-            }
-            rx = abs(rx)
-            ry = abs(ry)
-            let lambda =
-                pxp * pxp / (rx * rx) +
-                pyp * pyp / (ry * ry)
-            if (lambda > 1) {
-                let lambdaRt = sqrt(lambda);
-                rx *= lambdaRt
-                ry *= lambdaRt
-            }
-
-            /** 
-             * parametrize arc to 
-             * get center point start and end angles
-             */
-            let rxsq = rx * rx,
-                rysq = rx === ry ? rxsq : ry * ry
-
-            let pxpsq = pxp * pxp,
-                pypsq = pyp * pyp
-            let radicant = (rxsq * rysq) - (rxsq * pypsq) - (rysq * pxpsq)
-
-            if (radicant <= 0) {
-                radicant = 0
-            } else {
-                radicant /= (rxsq * pypsq) + (rysq * pxpsq)
-                radicant = sqrt(radicant) * (largeArcFlag === sweepFlag ? -1 : 1)
-            }
-
-            let centerxp = radicant ? radicant * rx / ry * pyp : 0
-            let centeryp = radicant ? radicant * -ry / rx * pxp : 0
-            let centerx = cosphi * centerxp - sinphi * centeryp + (p0.x + x) / 2
-            let centery = sinphi * centerxp + cosphi * centeryp + (p0.y + y) / 2
-
-            let vx1 = (pxp - centerxp) / rx
-            let vy1 = (pyp - centeryp) / ry
-            let vx2 = (-pxp - centerxp) / rx
-            let vy2 = (-pyp - centeryp) / ry
-
-            // get start and end angle
-            const vectorAngle = (ux, uy, vx, vy) => {
-                let dot = +(ux * vx + uy * vy).toFixed(9)
-                if (dot === 1 || dot === -1) {
-                    return dot === 1 ? 0 : PI
-                }
-                dot = dot > 1 ? 1 : (dot < -1 ? -1 : dot)
-                let sign = (ux * vy - uy * vx < 0) ? -1 : 1
-                return sign * acos(dot);
-            }
-
-            let ang1 = vectorAngle(1, 0, vx1, vy1),
-                ang2 = vectorAngle(vx1, vy1, vx2, vy2)
-
-            if (sweepFlag === 0 && ang2 > 0) {
-                ang2 -= PI * 2
-            }
-            else if (sweepFlag === 1 && ang2 < 0) {
-                ang2 += PI * 2
-            }
-
-            let ratio = +(abs(ang2) / (TAU / 4)).toFixed(0)
-
-            // increase segments for more accureate length calculations
-            let segments = ratio * splitSegments;
-            ang2 /= segments
-            let pathDataArc = [];
-
-
-            // If 90 degree circular arc, use a constant
-            // https://pomax.github.io/bezierinfo/#circles_cubic
-            // k=0.551784777779014
-            const angle90 = 1.5707963267948966;
-            const k = 0.551785
-            let a = ang2 === angle90 ? k :
-                (
-                    ang2 === -angle90 ? -k : 4 / 3 * tan(ang2 / 4)
-                );
-
-            let cos2 = ang2 ? cos(ang2) : 1;
-            let sin2 = ang2 ? sin(ang2) : 0;
-            let type = 'C'
-
-            const approxUnitArc = (ang1, ang2, a, cos2, sin2) => {
-                let x1 = ang1 != ang2 ? cos(ang1) : cos2;
-                let y1 = ang1 != ang2 ? sin(ang1) : sin2;
-                let x2 = cos(ang1 + ang2);
-                let y2 = sin(ang1 + ang2);
-
-                return [
-                    { x: x1 - y1 * a, y: y1 + x1 * a },
-                    { x: x2 + y2 * a, y: y2 - x2 * a },
-                    { x: x2, y: y2 }
-                ];
-            }
-
-            for (let i = 0; i < segments; i++) {
-                let com = { type: type, values: [] }
-                let curve = approxUnitArc(ang1, ang2, a, cos2, sin2);
-
-                curve.forEach((pt) => {
-                    let x = pt.x * rx
-                    let y = pt.y * ry
-                    com.values.push(cosphi * x - sinphi * y + centerx, sinphi * x + cosphi * y + centery)
-                })
-                pathDataArc.push(com);
-                ang1 += ang2
-            }
-
-            return pathDataArc;
-        }
-
-
     }
+
+
     /**
     * based on @cuixiping;
     * https://stackoverflow.com/questions/9017100/calculate-center-of-svg-arc/12329083#12329083
     */
     function svgArcToCenterParam(x1, y1, rx, ry, xAxisRotation, largeArc, sweep, x2, y2) {
-
-        let { cos, sin, atan2, sqrt, abs, min, max, PI } = Math;
 
         // helper for angle calculation
         const getAngle = (cx, cy, x, y) => {
@@ -1300,6 +1301,128 @@
         arcData.deltaAngle = deltaAngle;
 
         return arcData;
+    }
+
+
+    /**
+     * ellipse helpers
+     */
+
+    function getEllipseLengthLG(rx, ry, startAngle, endAngle, xAxisRotation = 0, convertParametric = true, degrees = false, wa = []) {
+
+        // convert to radians
+        if (degrees) {
+            //console.log('degrees');
+            startAngle = (startAngle * PI) / 180;
+            endAngle = (endAngle * PI) / 180;
+            xAxisRotation = xAxisRotation * PI / 180
+        }
+
+        // adjust for axis rotation
+        if (xAxisRotation && !convertParametric) {
+            startAngle = toParametricAngle(toNonParametricAngle(startAngle, rx, ry) - xAxisRotation, rx, ry)
+            endAngle = toParametricAngle(toNonParametricAngle(endAngle, rx, ry) - xAxisRotation, rx, ry);
+        }
+
+        else if (xAxisRotation && convertParametric) {
+            //console.log('xAxisRotation && convertParametric');
+            startAngle -= xAxisRotation
+            endAngle -= xAxisRotation
+        }
+
+        // convert parametric angles
+        if (convertParametric) {
+            //console.log('convertParametric');
+            startAngle = toParametricAngle(startAngle, rx, ry)
+            endAngle = toParametricAngle(endAngle, rx, ry)
+        }
+
+
+        // Transform [-1, 1] interval to [startAngle, endAngle]
+        let halfInterval = (endAngle - startAngle) * 0.5;
+        let midpoint = (endAngle + startAngle) * 0.5;
+
+
+        // Arc length integral approximation
+        let arcLength = 0;
+        for (let i = 0; i < wa.length; i++) {
+            let [weight, abscissae] = wa[i];
+            let theta = midpoint + halfInterval * abscissae;
+            let integrand = sqrt(
+                pow(rx * sin(theta), 2) + pow(ry * cos(theta), 2)
+            );
+
+            arcLength += weight * (integrand);
+        }
+
+        return abs(halfInterval * arcLength)
+    }
+
+
+
+    function getPointOnEllipse(cx, cy, rx, ry, angle, ellipseRotation = 0, parametricAngle = true, degrees = true) {
+
+        // Convert degrees to radians
+        angle = degrees ? (angle * PI) / 180 : angle;
+        ellipseRotation = degrees ? (ellipseRotation * PI) / 180 : ellipseRotation;
+        // reset rotation for circles or 360 degree 
+        ellipseRotation = rx !== ry ? (ellipseRotation !== PI * 2 ? ellipseRotation : 0) : 0;
+
+        // is ellipse
+        if (parametricAngle && rx !== ry) {
+            // adjust angle for ellipse rotation
+            angle = ellipseRotation ? angle - ellipseRotation : angle;
+            // Get the parametric angle for the ellipse
+            let angleParametric = atan(tan(angle) * (rx / ry));
+            // Ensure the parametric angle is in the correct quadrant
+            angle = cos(angle) < 0 ? angleParametric + PI : angleParametric;
+        }
+        // Calculate the point on the ellipse without rotation
+        let x = cx + rx * cos(angle),
+            y = cy + ry * sin(angle);
+        let pt = {
+            x: x,
+            y: y
+        }
+        if (ellipseRotation) {
+            pt.x = cx + (x - cx) * cos(ellipseRotation) - (y - cy) * sin(ellipseRotation)
+            pt.y = cy + (x - cx) * sin(ellipseRotation) + (y - cy) * cos(ellipseRotation)
+        }
+        return pt
+    }
+
+
+    // to parametric angle helper
+    function toParametricAngle(angle, rx, ry) {
+
+        if (rx === ry || (angle % PI * 0.5 === 0)) return angle;
+        let angleP = atan(tan(angle) * (rx / ry));
+
+        // Ensure the parametric angle is in the correct quadrant
+        angleP = cos(angle) < 0 ? angleP + PI : angleP;
+
+        return angleP
+    }
+
+    // From parametric angle to non-parametric angle
+    function toNonParametricAngle(angleP, rx, ry) {
+
+        if (rx === ry || (angleP % PI * 0.5 === 0)) return angleP;
+
+        let angle = atan(tan(angleP) * (ry / rx));
+        // Ensure the non-parametric angle is in the correct quadrant
+        return cos(angleP) < 0 ? angle + PI : angle;
+    };
+
+
+    function getTangentAngle(rx, ry, parametricAngle) {
+
+        // Derivative components
+        let dx = -rx * sin(parametricAngle);
+        let dy = ry * cos(parametricAngle);
+        let tangentAngle = atan2(dy, dx);
+
+        return tangentAngle;
     }
 
     pathDataLength.getPathLengthLookup = getPathLengthLookup;
