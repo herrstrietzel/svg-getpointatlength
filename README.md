@@ -302,7 +302,7 @@ Compared against reproducible/calculable objects/shapes like **circles** the met
 Cubic bezier length are approximated using [Legendre-Gauss quadrature](https://pomax.github.io/bezierinfo/legendre-gauss.html) integral approximation
 Weights and Abscissae values are adjusted for long path segments.  
 
-Elliptical Arc `A` commands are converted to cubic approximations. Circular arcs are retained which improves speed and accuracy.
+Elliptical Arc `A` commands are approximated also via Legendre-Gauss quadrature (new in version 1.2). Circular arcs are retained which improves speed and accuracy.
 
 ## Performance
 Native `getPointAtLength()` browser implementations aren't well optimized for **recurring** point calculations as they start from scratch on each call (parsing, measuring, calculating point at length). To be fair: there is no trivial length calculation algorithm.  
@@ -315,6 +315,10 @@ Since this library stores all important length data segment by segment – subse
 |100| 21.1 ms | 2.2 ms |
 |1000| 210 ms | 3.9 ms |
 |10000| 2093.6 ms | 6.7 ms |
+
+The lookup creation will usuall take up ~ 1-2ms (depending on the path).  
+As you can see the lookup's setup overhead is already compensated at 10 iteration.
+When we're entering a range of 100 or 1000 points the lookup method clearly wins whereas native `getPointAtLength()` severely impacts rendering performance.
 
 
 ## Addons
