@@ -234,6 +234,7 @@ So you also have info about the current segment the length is in as well as the 
 ## Updates and Versions
 
 ### Changelog
+* Version 1.2.0 calculates elliptic arcs directly – removing arc to cubic conversion
 * Version 1.1.0 improved performance for recurring point-at-length calculations, fixed tangent calculation bugs and added flat bezier edge cases
 * Version 1.0.15 improved performance for recurring point-at-length calculations
 * Version 1.0.13 added support for **tangent angles** at a specified length/point
@@ -307,6 +308,13 @@ Elliptical Arc `A` commands are converted to cubic approximations. Circular arcs
 Native `getPointAtLength()` browser implementations aren't well optimized for **recurring** point calculations as they start from scratch on each call (parsing, measuring, calculating point at length). To be fair: there is no trivial length calculation algorithm.  
 
 Since this library stores all important length data segment by segment – subsequent point (or tangent angle) calculations are way faster than the native methods.  
+
+| points | native | lookup |
+|--|--|--|
+|10| 2.1 ms | 2.1 ms |
+|100| 21.1 ms | 2.2 ms |
+|1000| 210 ms | 3.9 ms |
+|10000| 2093.6 ms | 6.7 ms |
 
 
 ## Addons
