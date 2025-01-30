@@ -402,9 +402,14 @@ let vertices = polygonFromPathData(pathData, options)
 
 ```
 
+## Report bugs
+If you found a bug - feel free to file an issue. 
+For debugging you may also test your path with this [**codepen testbed**](https://codepen.io/herrstrietzel/pen/VYZXbwE)
+
+
 ## Demos
+* [get point, tangent and segment](https://codepen.io/herrstrietzel/pen/VYZXbwE)
 * [getPointAtlength: native vs. lookup](https://codepen.io/herrstrietzel/pen/KKEzdPd)
-* [get point, tangent and segment](https://codepen.io/herrstrietzel/pen/VYZXbwE?editors=1000)
 * [get point at length – performance/accuracy](https://codepen.io/herrstrietzel/pen/WNWRroO)
 * [get point and area](https://codepen.io/herrstrietzel/pen/wBwmdKv)  
 * [path to polygon](https://codepen.io/herrstrietzel/pen/XWGddRm)
