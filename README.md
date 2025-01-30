@@ -1,4 +1,9 @@
 [![npm version](https://img.shields.io/npm/v/svg-getpointatlength)](https://www.npmjs.com/package/svg-getpointatlength)
+[![gzipped size](https://img.shields.io/bundlephobia/minzip/svg-getpointatlength)](https://bundlephobia.com/result?p=svg-getpointatlength)
+[![minified size](https://img.shields.io/bundlephobia/min/svg-getpointatlength)](https://bundlephobia.com/result?p=svg-getpointatlength)
+[![license](https://img.shields.io/npm/l/svg-getpointatlength)](https://www.npmjs.com/package/svg-getpointatlength)
+[![CDN](https://img.shields.io/badge/CDN-jsDelivr-E84D3D?style=flat)](https://cdn.jsdelivr.net/npm/svg-getpointatlength@latest/getPointAtLengthLookup.min.js)
+[![CDN](https://img.shields.io/badge/CDN-unpkg-blue?style=flat)](https://www.unpkg.com/svg-getpointatlength@latest/getPointAtLengthLookup.js)
 
 
 
@@ -11,7 +16,8 @@ This library provides methods to get:
 * **path length** from raw SVG path data strings
 * **point** coordinates at specified length
 * **tangent angles** (handy for SVG motion path emulations)
-* **segments** at length
+* **segments** at length 
+* **shape support**: length/point-at-length from elements
 
 The provided methods calculate points at lengths by measuring all segments lengths and saving them in a **reusable lookup object**.    
 
@@ -22,6 +28,8 @@ This way you can efficiently calculate hundreds of points on a path without sacr
   + [Node](#node)
 * [Methods and options](#methods-and-options)  
   + [Options: get tangent angles or segments at point](#options-get-tangent-angles-or-segments-at-point)  
+  + [Paths and shapes as input](#paths-and-shapes-as-input-argument-new-in-version-130) 
+    + [Get path data from shapes](#get-path-data-from-elementsshapes)
 * [Updates and Versions](#updates-and-versions)
   + [Changelog](#changelog)
   + [Downgrading](#downgrading)
@@ -231,9 +239,55 @@ See pointAtLength.html example in demos folder.
 
 So you also have info about the current segment the length is in as well as the `t` value used to interpolate the point.  
 
+### paths and shapes as input argument (New in version 1.3.0)
+
+`getPathLengthLookup()` now also supports elements these SVGGeometryElements: 
+* `<path>`
+* `<rect>`
+* `<circle>`
+* `<ellipse>`
+* `<polygon>`
+* `<polyline>`
+* `<line>`
+
+relative units like `%` are also supported as long as a `viewBox` is provided. Physical units like `in`, `mm`, `pt`, `em` are converted to user units pixel based on a 96 dpi resolution.
+
+```
+let path = document.querySelector('path')
+
+// measure path, create lookup
+let pathLengthLookup = getPathLengthLookup(path);
+
+// total length
+let {totalLength} = pathLengthLookup;
+
+// get point
+let pt = pathLengthLookup.getPointAtLength(totalLength/2);
+```
+
+#### Get path data from elements/shapes
+For usage in node.js you need a DOM parser like JSDOM.  
+To retrieve the path data from an element use `getPathDataFromEl(el)` 
+
+``` 
+let ellipse = document.querySelector('ellipse');
+let pathData = getPathDataFromEl(ellipse);
+
+// measure path, create lookup
+let pathLengthLookup = getPathLengthLookup(pathData);
+
+// total length
+let {totalLength} = pathLengthLookup;
+
+// get point
+let pt = pathLengthLookup.getPointAtLength(totalLength/2);
+```
+
+
 ## Updates and Versions
 
 ### Changelog
+* Version 1.3.0 **support for shapes** (ellipse, circle, rect etc.)
 * Version 1.2.4 fixed arc angle errors
 * Version 1.2.0 calculates elliptic arcs directly – removing arc to cubic conversion
 * Version 1.1.0 improved performance for recurring point-at-length calculations, fixed tangent calculation bugs and added flat bezier edge cases
@@ -261,7 +315,7 @@ Then we find the closest length in the length interval array. We interpolate a n
 
 
 ### Path data input
-`getPathLengthLookup(d)` accepts stringified path data (as used in `d` attributes) or an already parsed path data array.  
+`getPathLengthLookup(d)` accepts stringified path data (as used in `d` attributes) or an already parsed path data array as well as an SVGGeometry element.  
 
 This library also includes a quite versatile parsing function that could be used separately.  
 

@@ -99,10 +99,10 @@
 
             if (getTangent) {
                 let m0, m1, m2, m3, m4;
-                let shortCp1 = p0.x===cp1.x && p0.y===cp1.y;
-                let shortCp2 = p.x===cp2.x && p.y===cp2.y;
+                let shortCp1 = p0.x === cp1.x && p0.y === cp1.y;
+                let shortCp2 = p.x === cp2.x && p.y === cp2.y;
 
-                if (t === 0 && !shortCp1 ) {
+                if (t === 0 && !shortCp1) {
                     pt.x = p0.x;
                     pt.y = p0.y;
                     pt.angle = getAngle(p0, cp1)
@@ -116,8 +116,8 @@
 
                 else {
                     // adjust if cps are on start or end point
-                    if(shortCp1) t+=0.0000001;
-                    if(shortCp2) t-=0.0000001;
+                    if (shortCp1) t += 0.0000001;
+                    if (shortCp2) t -= 0.0000001;
 
                     m0 = interpolate(p0, cp1, t);
                     if (isCubic) {
@@ -414,7 +414,7 @@
                                 // ratio between segment length and difference
                                 let tScale = (1 / tSegLength) * diffLength || 0;
                                 newT = t - tStep * tScale || 0;
-                                
+
                                 // return point and optionally angle
                                 pt = pointAtT(points, newT, getTangent)
 
@@ -465,7 +465,21 @@
         let tDivisions = tDivisionsC;
 
         // get pathdata
-        let pathData = Array.isArray(d) ? d : parsePathDataNormalized(d);
+        let type = Array.isArray(d) ? 'array' : typeof d;
+
+        // if string is SVG - take first geometry element
+        if(type==='string' && d.startsWith('<svg')){
+            let svg = new DOMParser().parseFromString(d, 'text/html').querySelector('svg');
+            let allowed = ['path', 'polygon', 'polyline', 'line', 'rect', 'circle', 'ellipse'];
+            let children = [...svg.children].filter(node=>{return allowed.includes(node.nodeName.toLowerCase())  })
+            d = children.length ? children[0] : null;
+            if(d) type='element'
+        }
+
+        if(!d) throw Error("No path data defined");
+
+        let pathData = type === 'array' ? d : (type === 'string' ? parsePathDataNormalized(d) : getPathDataFromEl(d));
+
         let pathLength = 0;
         let M = pathData[0];
         let lengthLookup = { totalLength: 0, segments: [] };
@@ -949,7 +963,7 @@
         // offsets for absolute conversion
         let offX, offY, lastX, lastY, M;
 
-        for (let c = 0, len=commands.length; c < len; c++) {
+        for (let c = 0, len = commands.length; c < len; c++) {
             let com = commands[c];
             let type = com.substring(0, 1);
             let typeRel = type.toLowerCase();
@@ -1242,8 +1256,8 @@
             let r = diffX;
 
             let xMin = Math.min(x1, x2),
-             yMin = Math.min(y1, y2),
-             PIHalf = Math.PI * 0.5
+                yMin = Math.min(y1, y2),
+                PIHalf = Math.PI * 0.5
 
 
             // semi circles
@@ -1275,12 +1289,7 @@
                 //console.log(arcData);
                 return arcData;
             }
-
-            //console.log(diffX, diffY, semiH, semiV);
         }
-
-
-        //console.log('others');
 
         /**
          * if rx===ry x-axis rotation is ignored
@@ -1416,7 +1425,6 @@
     }
 
 
-
     function getPointOnEllipse(cx, cy, rx, ry, angle, ellipseRotation = 0, parametricAngle = true, degrees = true) {
 
         // Convert degrees to radians
@@ -1482,20 +1490,231 @@
         return tangentAngle;
     }
 
+
+    // retrieve pathdata from svg geometry elements
+    function getPathDataFromEl(el) {
+
+        let pathData = [];
+        let type = el.nodeName;
+        let atts, attNames, d, x, y, width, height, r, rx, ry, cx, cy, x1, x2, y1, y2;
+
+        // convert relative or absolute units 
+        const svgElUnitsToPixel = (el, decimals = 9) => {
+            //console.log(this);
+            const svg = el.nodeName !== "svg" ? el.closest("svg") : el;
+
+            // convert real life units to pixels
+            const translateUnitToPixel = (value) => {
+
+                if (value === null) {
+                    return 0
+                }
+                //default dpi = 96
+                let dpi = 96;
+                let unit = value.match(/([a-z]+)/gi);
+                unit = unit ? unit[0] : "";
+                let val = parseFloat(value);
+                let rat;
+
+                // no unit - already pixes/user unit
+                if (!unit) {
+                    return val;
+                }
+
+                switch (unit) {
+                    case "in":
+                        rat = dpi;
+                        break;
+                    case "pt":
+                        rat = (1 / 72) * 96;
+                        break;
+                    case "cm":
+                        rat = (1 / 2.54) * 96;
+                        break;
+                    case "mm":
+                        rat = ((1 / 2.54) * 96) / 10;
+                        break;
+                    // just a default approximation
+                    case "em":
+                    case "rem":
+                        rat = 16;
+                        break;
+                    default:
+                        rat = 1;
+                }
+                let valuePx = val * rat;
+                return +valuePx.toFixed(decimals);
+            };
+
+            // svg width and height attributes
+            let width = svg.getAttribute("width");
+            width = width ? translateUnitToPixel(width) : 300;
+            let height = svg.getAttribute("height");
+            height = width ? translateUnitToPixel(height) : 150;
+
+            //prefer viewBox values
+            let vB = svg.getAttribute("viewBox");
+            vB = vB
+                ? vB
+                    .replace(/,/g, " ")
+                    .split(" ")
+                    .filter(Boolean)
+                    .map((val) => {
+                        return +val;
+                    })
+                : [];
+
+            let w = vB.length ? vB[2] : width;
+            let h = vB.length ? vB[3] : height;
+            let scaleX = w / 100;
+            let scaleY = h / 100;
+            let scalRoot = Math.sqrt((Math.pow(scaleX, 2) + Math.pow(scaleY, 2)) / 2);
+
+            let attsH = ["x", "width", "x1", "x2", "rx", "cx", "r"];
+            let attsV = ["y", "height", "y1", "y2", "ry", "cy"];
+
+
+            let atts = el.getAttributeNames();
+            atts.forEach((att) => {
+                let val = el.getAttribute(att);
+                let valAbs = val;
+                if (attsH.includes(att) || attsV.includes(att)) {
+                    let scale = attsH.includes(att) ? scaleX : scaleY;
+                    scale = att === "r" && w != h ? scalRoot : scale;
+                    let unit = val.match(/([a-z|%]+)/gi);
+                    unit = unit ? unit[0] : "";
+                    if (val.includes("%")) {
+                        valAbs = parseFloat(val) * scale;
+                    }
+                    //absolute units
+                    else {
+                        valAbs = translateUnitToPixel(val);
+                    }
+                    el.setAttribute(att, +valAbs);
+                }
+            });
+        }
+
+        svgElUnitsToPixel(el)
+
+        const getAtts = (attNames) => {
+            atts = {}
+            attNames.forEach(att => {
+                atts[att] = +el.getAttribute(att)
+            })
+            return atts
+        }
+
+        switch (type) {
+            case 'path':
+                d = el.getAttribute("d");
+                pathData = parsePathDataNormalized(d);
+                break;
+
+            case 'rect':
+                attNames = ['x', 'y', 'width', 'height', 'rx', 'ry'];
+                ({ x, y, width, height, rx, ry } = getAtts(attNames));
+
+
+                if (!rx && !ry) {
+                    pathData = [
+                        { type: "M", values: [x, y] },
+                        { type: "L", values: [x + width, y] },
+                        { type: "L", values: [x + width, y + height] },
+                        { type: "L", values: [x, y + height] },
+                        { type: "Z", values: [] }
+                    ];
+                } else {
+
+                    if (rx > width / 2) {
+                        rx = width / 2;
+                    }
+                    if (ry > height / 2) {
+                        ry = height / 2;
+                    }
+                    pathData = [
+                        { type: "M", values: [x + rx, y] },
+                        { type: "L", values: [x + width - rx, y] },
+                        { type: "A", values: [rx, ry, 0, 0, 1, x + width, y + ry] },
+                        { type: "L", values: [x + width, y + height - ry] },
+                        { type: "A", values: [rx, ry, 0, 0, 1, x + width - rx, y + height] },
+                        { type: "L", values: [x + rx, y + height] },
+                        { type: "A", values: [rx, ry, 0, 0, 1, x, y + height - ry] },
+                        { type: "L", values: [x, y + ry] },
+                        { type: "A", values: [rx, ry, 0, 0, 1, x + rx, y] },
+                        { type: "Z", values: [] }
+                    ];
+                }
+                break;
+
+            case 'circle':
+            case 'ellipse':
+
+                attNames = ['cx', 'cy', 'rx', 'ry', 'r'];
+                ({ cx, cy, r, rx, ry } = getAtts(attNames));
+
+                if (type === 'circle') {
+                    r = r;
+                    rx = r
+                    ry = r
+                } else {
+                    rx = rx ? rx : r;
+                    ry = ry ? ry : r;
+                }
+
+                pathData = [
+                    { type: "M", values: [cx + rx, cy] },
+                    { type: "A", values: [rx, ry, 0, 1, 1, cx - rx, cy] },
+                    { type: "A", values: [rx, ry, 0, 1, 1, cx + rx, cy] },
+                ];
+
+                break;
+            case 'line':
+                attNames = ['x1', 'y1', 'x2', 'y2'];
+                ({ x1, y1, x2, y2 } = getAtts(attNames));
+                pathData = [
+                    { type: "M", values: [x1, y1] },
+                    { type: "L", values: [x2, y2] }
+                ];
+                break;
+            case 'polygon':
+            case 'polyline':
+
+                let points = el.getAttribute('points').replaceAll(',', ' ').split(' ').filter(Boolean)
+
+                for (let i = 0; i < points.length; i += 2) {
+                    pathData.push({
+                        type: (i === 0 ? "M" : "L"),
+                        values: [+points[i], +points[i + 1]]
+                    });
+                }
+                if (type === 'polygon') {
+                    pathData.push({
+                        type: "Z",
+                        values: []
+                    });
+                }
+                break;
+        }
+
+        return pathData;
+    };
+
+
     pathDataLength.getPathLengthLookup = getPathLengthLookup;
     pathDataLength.getPathLengthFromD = getPathLengthFromD;
     pathDataLength.getPathDataLength = getPathDataLength;
+    pathDataLength.getPathDataFromEl = getPathDataFromEl;
     pathDataLength.getLength = getLength;
     pathDataLength.parsePathDataNormalized = parsePathDataNormalized;
     pathDataLength.svgArcToCenterParam = svgArcToCenterParam;
     pathDataLength.getAngle = getAngle;
     pathDataLength.pointAtT = pointAtT;
 
-
     return pathDataLength;
 });
 
 
 if (typeof module === 'undefined') {
-    var { getPathLengthLookup, getPathLengthFromD, getPathDataLength, getLength, parsePathDataNormalized, svgArcToCenterParam, getAngle, pointAtT } = pathDataLength;
+    var { getPathLengthLookup, getPathLengthFromD, getPathDataLength, getLength, parsePathDataNormalized, svgArcToCenterParam, getAngle, pointAtT, getPathDataFromEl } = pathDataLength;
 }
