@@ -234,6 +234,7 @@ So you also have info about the current segment the length is in as well as the 
 ## Updates and Versions
 
 ### Changelog
+* Version 1.2.4 fixed arc angle errors
 * Version 1.2.0 calculates elliptic arcs directly – removing arc to cubic conversion
 * Version 1.1.0 improved performance for recurring point-at-length calculations, fixed tangent calculation bugs and added flat bezier edge cases
 * Version 1.0.15 improved performance for recurring point-at-length calculations
