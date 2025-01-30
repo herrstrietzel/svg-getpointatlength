@@ -1,4 +1,4 @@
-/* v 1.2.1 */
+/* v 1.2.4 */
 (function (root, factory) {
     if (typeof module !== 'undefined' && module.exports) {
         // CommonJS (Node.js) environment
@@ -22,7 +22,6 @@
     // LG weight/abscissae generator
     const getLegendreGaussValues = (n, x1 = -1, x2 = 1) => {
         //console.log('add new LG', n);
-
         let waArr = []
         let z1, z, xm, xl, pp, p3, p2, p1;
         const m = (n + 1) >> 1;
@@ -458,7 +457,6 @@
          * auto adjust legendre-gauss accuracy
          * precision for arc approximation
         */
-        let arcAccuracy = precision === 'high' ? 4 : (precision === 'medium' ? 2 : 1);
         let auto_lg = precision === 'high' ? true : false;
         let lg = precision === 'medium' ? 24 : 12;
         let lgArr = [12, 24, 36, 48, 60, 64, 72, 96];
@@ -467,7 +465,7 @@
         let tDivisions = tDivisionsC;
 
         // get pathdata
-        let pathData = Array.isArray(d) ? d : parsePathDataNormalized(d, { arcAccuracy: arcAccuracy });
+        let pathData = Array.isArray(d) ? d : parsePathDataNormalized(d);
         let pathLength = 0;
         let M = pathData[0];
         let lengthLookup = { totalLength: 0, segments: [] };
@@ -476,21 +474,19 @@
 
         for (let i = 1; i < pathData.length; i++) {
             let comPrev = pathData[i - 1];
-            let valuesPrev = comPrev.values;
-            let valuesPrevL = valuesPrev.length;
-            let p0 = { x: valuesPrev[valuesPrevL - 2], y: valuesPrev[valuesPrevL - 1] };
+            let valuesPrevL = comPrev.values.slice(-2)
+            let p0 = { x: valuesPrevL[0], y: valuesPrevL[1] };
 
             let com = pathData[i];
             let { type, values } = com;
-            let valuesL = values.length;
-            let p = { x: values[valuesL - 2], y: values[valuesL - 1] };
+            let valuesL = values.slice(-2);
+            let p = { x: valuesL[0], y: valuesL[1] };
             let cp1, cp2, t, angle;
             let len = 0;
 
 
             // collect segment data in object
             let lengthObj = {
-                typeO: type,
                 type: type,
                 index: i,
                 com: { type: type, values: values, p0: p0 },
@@ -523,7 +519,7 @@
                     lengthObj.points.push(p0, p);
 
                     if (getTangent) {
-                        angle = atan2(p.y - p0.y, p.x - p0.x)
+                        angle = getAngle(p0, p)
                         lengthObj.angles.push(angle);
                     }
                     break;
@@ -547,16 +543,12 @@
                      */
                     if (rx !== ry) {
 
-                        // start and end angles are parametrized
-                        let convertParametricAngle = false;
-
                         // values are alredy in radians
                         let degrees = false;
 
                         // add weight/abscissa values if not existent
                         let wa_key = `wa${lg}`;
                         if (!lgVals[wa_key]) {
-                            console.log('lg', lg);
                             lgVals[wa_key] = getLegendreGaussValues(lg)
                         }
 
@@ -574,8 +566,12 @@
                         endAngle = toParametricAngle((endAngle - xAxisRotation), rx, ry)
 
                         // adjust end angle
-                        if (startAngle > endAngle) {
+                        if (sweep && startAngle > endAngle) {
                             endAngle += PI * 2
+                        }
+
+                        if (!sweep && startAngle < endAngle) {
+                            endAngle -= PI * 2
                         }
 
                         // precision
@@ -587,7 +583,7 @@
 
                         for (let i = 1; i < tDivisionsC; i++) {
                             let endAngle = startAngle + deltaAngle / tDivisionsC * i;
-                            lenNew = getEllipseLengthLG(rx, ry, startAngle, endAngle, 0, convertParametricAngle, degrees, wa);
+                            lenNew = getEllipseLengthLG(rx, ry, startAngle, endAngle, 0, false, degrees, wa);
 
                             len += lenNew;
                             lengthObj.lengths.push(lenNew + pathLength)
@@ -598,7 +594,7 @@
                         lengthObj.angles.push(endAngle);
 
                         // last length
-                        len = getEllipseLengthLG(rx, ry, startAngle, endAngle, 0, convertParametricAngle, degrees, wa);
+                        len = getEllipseLengthLG(rx, ry, startAngle, endAngle, 0, false, degrees, wa);
 
                     }
                     // circular arc
@@ -744,10 +740,6 @@
                         if (getTangent) {
                             let angleStart = pointAtT(pts, 0, true).angle
 
-                            //console.log('angleStart', angleStart);
-
-                            //&& (p0.x!==cp1.x && p0.y!==cp1.y)
-
                             // add only start and end angles for béziers
                             lengthObj.angles.push(angleStart, pointAtT(pts, 1, true).angle);
                         }
@@ -782,7 +774,6 @@
             // add original command if it was converted for eliptic arcs
             if (com.index) {
                 lengthObj.index = com.index;
-                lengthObj.typeO = com.com.type;
                 lengthObj.com = com.com;
             }
 
@@ -952,14 +943,13 @@
         // valid command value lengths
         let comLengths = { m: 2, a: 7, c: 6, h: 1, l: 2, q: 4, s: 4, t: 2, v: 1, z: 0 };
 
-        let hasArcs = /[a]/gi.test(d);
         let hasShorthands = toLonghands ? /[vhst]/gi.test(d) : false;
         let hasRelative = toAbsolute ? /[lcqamts]/g.test(d.substring(1, d.length - 1)) : false;
 
         // offsets for absolute conversion
         let offX, offY, lastX, lastY, M;
 
-        for (let c = 0; c < commands.length; c++) {
+        for (let c = 0, len=commands.length; c < len; c++) {
             let com = commands[c];
             let type = com.substring(0, 1);
             let typeRel = type.toLowerCase();
@@ -1029,7 +1019,7 @@
             }
 
             // no relative, shorthand or arc command - return current 
-            if (!hasRelative && !hasShorthands && !hasArcs) {
+            if (!hasRelative && !hasShorthands) {
 
                 comChunks.forEach((com) => {
                     pathData.push(com);
@@ -1221,12 +1211,6 @@
         rx = abs(rx);
         ry = abs(ry);
 
-        /**
-         * if rx===ry x-axis rotation is ignored
-         * otherwise convert degrees to radians
-         */
-        let phi = rx === ry ? 0 : (xAxisRotation * PI) / 180;
-        let cx, cy
 
         // create data object
         let arcData = {
@@ -1247,6 +1231,63 @@
             throw Error("rx and ry can not be 0");
         }
 
+        let shortcut = true
+        //console.log('short');
+
+        if (rx === ry && shortcut) {
+
+            // test semicircles
+            let diffX = Math.abs(x2 - x1)
+            let diffY = Math.abs(y2 - y1)
+            let r = diffX;
+
+            let xMin = Math.min(x1, x2),
+             yMin = Math.min(y1, y2),
+             PIHalf = Math.PI * 0.5
+
+
+            // semi circles
+            if (diffX === 0 && diffY || diffY === 0 && diffX) {
+                //console.log('semi');
+
+                r = diffX === 0 && diffY ? diffY / 2 : diffX / 2;
+                arcData.rx = r
+                arcData.ry = r
+
+                // verical
+                if (diffX === 0 && diffY) {
+                    arcData.cx = x1;
+                    arcData.cy = yMin + diffY / 2;
+                    arcData.startAngle = y1 > y2 ? PIHalf : -PIHalf
+                    arcData.endAngle = y1 > y2 ? -PIHalf : PIHalf
+                    arcData.deltaAngle = sweep ? Math.PI : -Math.PI
+
+                }
+                // horizontal
+                else if (diffY === 0 && diffX) {
+                    arcData.cx = xMin + diffX / 2;
+                    arcData.cy = y1
+                    arcData.startAngle = x1 > x2 ? Math.PI : 0
+                    arcData.endAngle = x1 > x2 ? -Math.PI : Math.PI
+                    arcData.deltaAngle = sweep ? Math.PI : -Math.PI
+                }
+
+                //console.log(arcData);
+                return arcData;
+            }
+
+            //console.log(diffX, diffY, semiH, semiV);
+        }
+
+
+        //console.log('others');
+
+        /**
+         * if rx===ry x-axis rotation is ignored
+         * otherwise convert degrees to radians
+         */
+        let phi = rx === ry ? 0 : (xAxisRotation * PI) / 180;
+        let cx, cy
 
         let s_phi = !phi ? 0 : sin(phi);
         let c_phi = !phi ? 1 : cos(phi);
@@ -1302,14 +1343,24 @@
          */
         let startAngle = getAngle(cx, cy, x1, y1);
         let endAngle = getAngle(cx, cy, x2, y2);
-        //console.log('start:', startAngle, 'end:', endAngle)
-        endAngle = (!sweep && largeArc) ? endAngle - PI * 2 : ((endAngle < startAngle && largeArc) || (endAngle < 0 && endAngle < startAngle) ? endAngle + PI * 2 : endAngle)
+
+        // adjust end angle
+        if (!sweep && endAngle > startAngle) {
+            //console.log('adj neg');
+            endAngle -= Math.PI * 2
+        }
+
+        if (sweep && startAngle > endAngle) {
+            //console.log('adj pos');
+            endAngle = endAngle <= 0 ? endAngle + Math.PI * 2 : endAngle
+        }
 
         let deltaAngle = endAngle - startAngle
         arcData.startAngle = startAngle;
         arcData.endAngle = endAngle;
         arcData.deltaAngle = deltaAngle;
 
+        //console.log('arc', arcData);
         return arcData;
     }
 
@@ -1322,7 +1373,6 @@
 
         // convert to radians
         if (degrees) {
-            //console.log('degrees');
             startAngle = (startAngle * PI) / 180;
             endAngle = (endAngle * PI) / 180;
             xAxisRotation = xAxisRotation * PI / 180
@@ -1335,14 +1385,12 @@
         }
 
         else if (xAxisRotation && convertParametric) {
-            //console.log('xAxisRotation && convertParametric');
             startAngle -= xAxisRotation
             endAngle -= xAxisRotation
         }
 
         // convert parametric angles
         if (convertParametric) {
-            //console.log('convertParametric');
             startAngle = toParametricAngle(startAngle, rx, ry)
             endAngle = toParametricAngle(endAngle, rx, ry)
         }
@@ -1361,7 +1409,6 @@
             let integrand = sqrt(
                 pow(rx * sin(theta), 2) + pow(ry * cos(theta), 2)
             );
-
             arcLength += weight * (integrand);
         }
 
