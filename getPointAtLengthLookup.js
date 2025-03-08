@@ -251,7 +251,7 @@
         if (length === 0) {
             return pt;
         }
-        else if (length === totalLength) {
+        else if (length >= totalLength) {
             let ptLast = seglast.points.slice(-1)[0]
             let angleLast = seglast.angles.slice(-1)[0]
 
