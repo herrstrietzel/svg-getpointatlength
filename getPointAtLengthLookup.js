@@ -251,6 +251,8 @@
         if (length === 0) {
             return pt;
         }
+
+        //return last on-path point when length is larger or equals total length
         else if (length >= totalLength) {
             let ptLast = seglast.points.slice(-1)[0]
             let angleLast = seglast.angles.slice(-1)[0]
@@ -961,7 +963,8 @@
         let hasRelative = toAbsolute ? /[lcqamts]/g.test(d.substring(1, d.length - 1)) : false;
 
         // offsets for absolute conversion
-        let offX, offY, lastX, lastY, M;
+        let offX, offY, lastX, lastY, M, lastType='m';
+
 
         for (let c = 0, len = commands.length; c < len; c++) {
             let com = commands[c];
@@ -1032,9 +1035,20 @@
                 }
             }
 
+            //search for omited M commands
+            for(let i=0, len=comChunks.length; i<len; i++){
+                let com=comChunks[i];
+                if(com.type.toLowerCase()!=='m' && lastType==='z'){
+                    //console.log('omitted M', com);
+                    hasRelative=true;
+                    comChunks.splice(i, 0, { type: 'M', values: [M.x, M.y] });
+                    i++;
+                }
+            }
+
+
             // no relative, shorthand or arc command - return current 
             if (!hasRelative && !hasShorthands) {
-
                 comChunks.forEach((com) => {
                     pathData.push(com);
                 });
@@ -1059,7 +1073,7 @@
                 // first M is always absolute
                 isRel = typeFirst.toLowerCase() === typeFirst && pathData.length ? true : false;
 
-                for (let i = 0; i < comChunks.length; i++) {
+                for (let i = 0,len=comChunks.length; i < len; i++) {
                     let com = comChunks[i];
                     let type = com.type;
                     let values = com.values;
@@ -1133,8 +1147,6 @@
                                 lastX = M.x;
                                 lastY = M.y;
                                 break;
-
-
                         }
                     }
                     // is absolute
@@ -1173,6 +1185,9 @@
 
                         }
                     }
+
+                    // update last type for omitted M commands
+                    lastType=type.toLowerCase();
 
                     // add to pathData array
                     pathData.push(com);

@@ -17,13 +17,10 @@
 
     <script src="https://cdn.jsdelivr.net/npm/svg-getpointatlength@latest/getPointAtLengthLookup.js"></script>
 
+        <script src="../getPointAtLengthLookup.js"></script>
+
+
     -->
-
-
-    <script src="../getPointAtLengthLookup.js"></script>
-
-
-
 
 
     <style>
@@ -101,10 +98,22 @@
 <body>
 
 
+    <!-- 
+
+        M  529 664  C  93 290  616 93  1942 385  C  1014 330  147 720  2059 70  C  1307 400  278 713  1686 691   
+
+
+    -->
+
+
+
+
     <svg id="svg" viewBox="0 100 80 100">
         <path id="path" class="previewPath" d=" 
 
-        M  529 664  C  93 290  616 93  1942 385  C  1014 330  147 720  2059 70  C  1307 400  278 713  1686 691         
+        m3 7 10 0m-10 10 10 0v10h10v10h10c0 6 5 10 10 10 0 5 5 10 10 10s10 10 10 10-10 10 10 10q-23-27 0-20 20-5 0-10t-3-7 0-15
+        a5 10 45 10-30-5 5 
+        5 20 01-10-10z
 
         " />
         <path id="segAtPoint" d="" fill="none" stroke="green" stroke-width="3%" stroke-opacity="0.5" />
@@ -116,43 +125,101 @@
 
 
 
+    <!-- 
+        <script src="../getPointAtLengthLookup.js"></script>
+            <script src="../getPointAtLengthLookup.js"></script>
+
+    <script src="../getPointAtLengthLookup_back_bezier.js"></script>
+
+
+    <script src="../getPointAtLengthLookup.js"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/svg-getpointatlength@latest/getPointAtLengthLookup.js"></script>
+
+    <script src="../getPointAtLengthLookup_back_bezier.js"></script>
+
+
+    <script src="../getPointAtLengthLookup.js"></script>
+
+
+
+            <script src="../testcomp.js"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/svg-getpointatlength@latest/getPointAtLengthLookup.min.js"></script>
+
+
+    <script src="../getPointAtLengthLookup.min2.js"></script>
+
+
+
+        <script src="https://cdn.jsdelivr.net/npm/svg-getpointatlength@latest/getPointAtLengthLookup.min.js"></script>
+
+            <script src="../getPointAtLengthLookup.min2.js"></script>
+
+    <script src="../getPointAtLengthLookup.min2.js"></script>
+
+
+        <script src="../getPointAtLengthLookup.js"></script>
+
+    -->
+
+
+    <script src="../getPointAtLengthLookup_back2.js"></script>
+
+
+
+
+
+
     <script>
 
-
-        let d = path.getAttribute('d')
-        let quality = 'medium';
-        let lengthOnly = false;
-        let getTangent = true;
-
-        let pathLengthLookup = getPathLengthLookup(d, quality, lengthOnly, getTangent )
-        let totalLength = pathLengthLookup.totalLength
-        let steps = 100
-        let step = totalLength / steps
-
-        //let angles = []
-        console.log(pathLengthLookup);
+        window.addEventListener('DOMContentLoaded', e => {
 
 
-        // adjust viewBox
-        let vB = path.getBBox()
-        svg.setAttribute('viewBox', [vB.x, vB.y, vB.width, vB.height].join(' '))
+
+            let d = path.getAttribute('d')
+            let quality = 'high';
+            let lengthOnly = false;
+            let getTangent = true;
+
+            console.log('setup lookup creation');
+            perfStart();
+            let pathLengthLookup = getPathLengthLookup(d, quality, lengthOnly, getTangent)
+            perfEnd();
 
 
-        // interpolated angles
-        perfStart();
-        step = totalLength / steps
-        for (let i = 0; i <= steps; i++) {
+            let totalLength = pathLengthLookup.totalLength
+            let steps = 100000
+            let step = totalLength / steps
 
-            let len0 = step * i
-            //let angleI = interpolateAngle(len0, angles)
+            //let angles = []
+            console.log(pathLengthLookup);
 
-            let pt = pathLengthLookup.getPointAtLength(step * i, true);
 
-            renderTangent(svg, pt, pt.angle- Math.PI * 0.5, 'green', '0.5%',  step  )
-        }
+            // adjust viewBox
+            let vB = path.getBBox()
+            svg.setAttribute('viewBox', [vB.x, vB.y, vB.width, vB.height].join(' '))
 
-        perfEnd();
-        
+
+            // interpolated angles
+            console.log(`point ${steps} calculation`);
+            perfStart();
+            step = totalLength / steps
+            for (let i = 0; i <= steps; i++) {
+
+                let len0 = step * i
+                //let angleI = interpolateAngle(len0, angles)
+
+                let pt = pathLengthLookup.getPointAtLength(step * i, true);
+
+                //renderTangent(svg, pt, pt.angle- Math.PI * 0.5, 'green', '0.5%',  step  )
+            }
+
+            perfEnd();
+
+        });
+
+
 
 
         function renderTangent(svg, pt, angle = 0, stroke = "green", strokeWidth = "0.5%", len = 10, render = true) {

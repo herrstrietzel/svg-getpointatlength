@@ -303,11 +303,9 @@
 
                 // get point at Length
                 let currentLength = totalLength / steps * value
-                let pt = pathLengthLookup.getPointAtLength(currentLength);
+                let pt = pathLengthLookup.getPointAtLength(currentLength, true);
 
                 resPt.textContent = JSON.stringify(pt)
-
-
 
 
                 split.setAttribute('cx', pt.x)

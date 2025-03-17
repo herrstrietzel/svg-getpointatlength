@@ -98,7 +98,7 @@
 
             <h3>Segment at length</h3>
             <p>
-            <code id="segment"></code>
+                <code id="segment"></code>
             </p>
 
             <!-- 
@@ -179,9 +179,16 @@
         </script>
 
 
+
+
         <script src="../getPointAtLengthLookup.js"></script>
 
+
         <!-- 
+    <script src="../getPointAtLengthLookup.js"></script>
+
+
+
             <script src="../pathDataGetBBox.js"></script>
         -->
 
@@ -192,13 +199,9 @@
         <script>
 
 
-
-
-
             // init
-            let path = document.querySelector('path')
+            let path = document.querySelector('path, polygon, polyline, line, rect, circle, ellipse')
             let svg = path.closest('svg')
-
 
 
             /**
@@ -231,9 +234,13 @@
             let resIdeal = ''
 
 
+
+
             perfStart()
+            //let pathLengthLookup = getPathLengthLookup(pathData, quality)
             let pathLengthLookup = getPathLengthLookup(d, quality)
             perfEnd()
+
 
 
             let totalLength = pathLengthLookup.totalLength
@@ -278,6 +285,19 @@
             function updateSVG() {
                 d = svgInput.value
 
+                // if is element
+                if (d.trim().startsWith('<svg')) {
+                    let svg = new DOMParser().parseFromString(d, 'text/html').querySelector('svg');
+                    let allowed = ['path', 'polygon', 'polyline', 'line', 'rect', 'circle', 'ellipse'];
+                    let children = [...svg.children].filter(node => { return allowed.includes(node.nodeName.toLowerCase()) })
+                    let el = children.length ? children[0] : null;
+
+                    let pathData = getPathDataFromEl(el)
+                    d = pathData.map(com=>{return [com.type, ...com.values] }).flat().join(' ')
+                }
+
+                let path = document.querySelector('path, polygon, polyline, line, rect, circle, ellipse')
+
                 path.setAttribute('d', d)
                 totalLengthN = path.getTotalLength()
 
@@ -299,7 +319,7 @@
                 totalLength = pathLengthLookup.totalLength
 
 
-                console.log('pathLengthLookup', pathLengthLookup);
+                console.log('pathLengthLookup:', pathLengthLookup);
 
 
                 // get area
@@ -309,7 +329,7 @@
                 let area = getPathArea(pathData)
 
                 // only pathLength
-                totalLengthSimple = getPathLengthFromD(d, quality)
+                //totalLengthSimple = getPathLengthFromD(d, quality)
 
 
                 updatePointAtlength()
@@ -339,7 +359,7 @@
 
                 tangent.setAttribute('x2', pT.x)
                 tangent.setAttribute('y2', pT.y)
-                tangentAngle.textContent = `radians: ${+angle.toFixed(3)}; degrees: ${ +(angle * 180 / Math.PI).toFixed(3) }`
+                tangentAngle.textContent = `radians: ${+angle.toFixed(3)}; degrees: ${+(angle * 180 / Math.PI).toFixed(3)}`
 
                 let diffIdeal = resIdeal ? totalLength - resIdeal : 'not specified'
 
@@ -352,10 +372,8 @@
                 `;
 
 
-
                 split.setAttribute('cx', pt.x)
                 split.setAttribute('cy', pt.y)
-
 
 
                 // native method get point at length – just for comparison
@@ -377,13 +395,13 @@
                     { type: comSegment.type, values: comSegment.values },
                 ]
 
-                if(comSegment.type==='Z'){
+                if (comSegment.type === 'Z') {
                     pathDataSeg[1].type = 'L'
                 }
 
-                let dSeg = pathDataSeg.map(com=>{return `${com.type} ${com.values.join(' ')}` }).join(' ')
+                let dSeg = pathDataSeg.map(com => { return `${com.type} ${com.values.join(' ')}` }).join(' ')
                 segAtPoint.setAttribute('d', dSeg)
-                segment.textContent = '  index:'+ pt.index+ ' pathdata:'+ dSeg ;
+                segment.textContent = '  index:' + pt.index + ' pathdata:' + dSeg;
 
 
             }
