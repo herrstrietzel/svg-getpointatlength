@@ -287,7 +287,7 @@ let pt = pathLengthLookup.getPointAtLength(totalLength/2);
 ## Updates and Versions
 
 ### Changelog
-* Version 1.3.1 fixes a rare parsing issue where 'M' commands were omitted (e.g `z` followed by another drawing command than `M` – unfortunately valid). See updated demo with "path-from-hell3" (serioisly a pretty good stress test for any parser=). Thanks to [vboye-foreflight's PR](https://github.com/herrstrietzel/svg-getpointatlength/commit/ee035987b9ac7d5a8925190b59128206199779ae) we now get the point at last length whenever the input length exceeds the total length - compliant with native methods' behavior.
+* Version 1.3.1 fixes a rare parsing issue where 'M' commands were omitted (e.g `z` followed by another drawing command than `M` – unfortunately valid). See updated demo with "path-from-hell3" (... a pretty good stress test for any path data parser=). Thanks to [vboye-foreflight's PR](https://github.com/herrstrietzel/svg-getpointatlength/commit/ee035987b9ac7d5a8925190b59128206199779ae) we now get the point at last length whenever the input length exceeds the total length - compliant with native methods' behavior.
 * Version 1.3.0 **support for shapes** (ellipse, circle, rect etc.)
 * Version 1.2.4 fixed arc angle errors
 * Version 1.2.0 calculates elliptic arcs directly – removing arc to cubic conversion
