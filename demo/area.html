@@ -158,7 +158,7 @@
 
         </script>
 
-
+        <script src="../shapeToPath.js"></script>
         <script src="../getPointAtLengthLookup.js"></script>
 
         <!-- 
@@ -212,7 +212,7 @@
             perfEnd()
 
 
-            let totalLength = pathLengthLookup.totalLength
+            let totalLength = pathLengthLookup.totalLength;
             let totalLengthN = path.getTotalLength()
 
             //updateSVG();
@@ -246,7 +246,15 @@
 
 
             function updateSVG() {
-                d = svgInput.value
+
+                try{
+                    d = svgInput.value
+                }catch{
+                    d = getPathDataFromEl(d)
+                    console.log('!!!d', d);
+                }
+
+
 
                 path.setAttribute('d', d)
                 totalLengthN = path.getTotalLength()

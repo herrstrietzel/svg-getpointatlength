@@ -1,4 +1,4 @@
-/* v 1.2.4 */
+/* v 1.3.2 */
 (function (root, factory) {
     if (typeof module !== 'undefined' && module.exports) {
         // CommonJS (Node.js) environment
@@ -482,6 +482,7 @@
 
         let pathData = type === 'array' ? d : (type === 'string' ? parsePathDataNormalized(d) : getPathDataFromEl(d));
 
+        
         let pathLength = 0;
         let M = pathData[0];
         let lengthLookup = { totalLength: 0, segments: [] };
