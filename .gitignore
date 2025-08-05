@@ -2,5 +2,6 @@
 __backup
 __log
 __todo
+__testfiles
 gitnore
 node_modules
