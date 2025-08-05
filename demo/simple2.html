@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+
+    <script>
+
+        function renderPoint(
+            svg,
+            coords,
+            fill = "red",
+            r = "1%",
+            opacity = "1",
+            title = '',
+            render = true,
+            id = "",
+            className = ""
+        ) {
+            if (Array.isArray(coords)) {
+                coords = {
+                    x: coords[0],
+                    y: coords[1]
+                };
+            }
+            let marker = `<circle class="${className}" opacity="${opacity}" id="${id}" cx="${coords.x}" cy="${coords.y}" r="${r}" fill="${fill}">
+  <title>${title}</title></circle>`;
+
+            if (render) {
+                svg.insertAdjacentHTML("beforeend", marker);
+            } else {
+                return marker;
+            }
+        }
+
+    </script>
+
+<!-- 
+    <script src="https://cdn.jsdelivr.net/npm/svg-getpointatlength@latest/getPointAtLengthLookup.js"></script>
+        
+-->
+
+<script src="../dist/svg-getpointatlength.js"></script>
+
+
+
+
+
+</head>
+
+<body>
+
+
+    <svg id="svg" viewBox="0 0 100 100">
+        <path id="path" class="previewPath" d="
+
+        m 50,0 .00001.0001.001 10e-10 Q 36.4 0 24.8 6.8t-18 18  t-6.8 25.2 C 0 63.8 5.6 76.3 14.65 85.35 s 21.55 14.65 35.35 14.65 a 50 25-45 0115.8-34.3 50 25 -45 0134.2 -25.7h -20-.5 v -12.5-12.5 H 75 50 V 0 z M 40 60 h-20 V 20h 18 .5.5.5.5z   m-5-35 c0 10 0 15 0 30 q-5 0 -10 0v-30zh-10 v20 h 5
+       " />
+
+
+    </svg>
+
+    <!-- 
+    M50 0 50 0 50 0C40.93 0 32.53 2.27 24.8 6.8 17.07 11.33 11.07 17.33 6.8 24.8 2.53 32.27 .27 40.67 0 50 0 63.8 5.6 76.3 14.65 85.35 23.7 94.4 36.2 100 50 100 50.18 90.11 56.02 77.44 65.8 65.7 75.59 53.96 88.21 44.47 100 40L80 40 79.5 40 79.5 27.5 79.5 15 75 15 50 15 50 0zM40 60 20 60 20 20 38 20 38.5 20 39 20 39.5 20 40 20zM35 25C35 35 35 40 35 55 31.67 55 28.33 55 25 55L25 25z
+    
+    -->
+
+
+    <script type="module">
+
+        import svgpath from 'https://cdn.jsdelivr.net/npm/svgpath@2.6.0/+esm'
+
+        let d = path.getAttribute('d');
+
+        let d2 = `  
+        m 50,0 .00001.0001.001 10e-10 Q 36.4 0 24.8 6.8t-18 18  t-6.8 25.2 C 0 63.8 5.6 76.3 14.65 85.35 s 21.55 14.65 35.35 14.65 a 50 25-45 0115.8-34.3 50 25 -45 0134.2 -25.7h -20-.5 v -12.5-12.5 H 75 50 V 0 z M 40 60 h-20 V 20h 18 .5.5.5.5z   m-5-35 c0 10 0 15 0 30 q-5 0 -10 0v-30zh-10 v20 h 7e-10 666  `;
+
+        d= d2;
+        path.setAttribute('d', d)
+
+        //d2 = d2+d2+d2+d2+d2
+
+               // parse test
+
+        
+               /*
+               
+               let t0 = performance.now()
+               let pathData2 = new svgpath(d2);
+               let t1 = performance.now() - t0
+               console.log(t1, pathData2);
+        
+        */ 
+
+        
+       let t0 = performance.now()
+       let parsed = parse(d2, true)
+       let t1 = performance.now() - t0
+       console.log(t1, parsed);
+       
+
+        
+        if (SVGPathElement.prototype.getPathData !== undefined) {
+            console.log('native support');
+
+            let pathDataN = path.getPathData();
+            let type = typeof pathDataN;
+
+            //console.log(pathDataN);
+            //d=pathDataN;
+        }
+
+        /*
+        // repeat pathdata for testing
+        let r = 0;
+        for (let i = 0; i < r; i++) {
+            d += d
+        }
+        */
+
+        let precision= 'medium';
+        let onlyLength = false;
+        let getTangent = true;
+        getTangent = false;
+
+        let lookup = getPathLengthLookup(d, precision, onlyLength, getTangent);
+
+
+        let len = 200
+        let pt = lookup.getPointAtLength(len)
+
+        //let lenS = getPathLengthFromD(d);
+        //console.log('lenS', lenS);
+        console.log('ms', t1, lookup);
+
+
+        let ptN = path.getPointAtLength(len)
+
+        //let segment = lookup.getSegmentAtLength(len)
+        //console.log('segment', segment);
+
+        renderPoint(svg, pt, 'green', '1.5%')
+        renderPoint(svg, ptN)
+
+
+    </script>
+
+</body>
+
+</html>

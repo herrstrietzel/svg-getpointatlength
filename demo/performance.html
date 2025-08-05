@@ -160,8 +160,10 @@
 
     <script src="https://cdn.jsdelivr.net/gh/Kaiido/path2D-inspection@master/build/path2D-inspection.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/svg-path-properties@latest/dist/svg-path-properties.min.js"></script>
-    <script src="../getPointAtLengthLookup.js"></script>
     <script src="path_samples.js"></script>
+
+    <script src="../dist/svg-getpointatlength.js"></script>
+
 
 
 
@@ -188,15 +190,18 @@
 
         let firstInd = 16
         firstInd = 7
-        firstInd = 16
+        firstInd = 1
         let first = inputExample.options[firstInd];
         exactLength = samples[firstInd].res ? samples[firstInd].res : 0;
 
         first.selected = true;
         svgInput.value = first.value;
+
+        let example = first.value;
         let d = svgInput.value;
         let vertices = +inputVertices.value;
-        path.setAttribute("d", d);
+
+        //path.setAttribute("d", d);
 
         let inputsShowResults = document.querySelectorAll('.inputShowResults');
         inputsShowResults.forEach(inp => {
@@ -231,13 +236,36 @@
             svgInput.value = example;
 
             let index = e.target.options.selectedIndex;
+
             d = example;
             exactLength = samples[index].res ? samples[index].res : 0;
             updateSVG();
         });
 
         function updateSVG() {
-            d = svgInput.value;
+            let d = svgInput.value;
+
+            d = normalizePathInput(d, true);
+            //console.log('d', d, );
+            //console.log('svgInput.value',svgInput.value);
+
+
+            /*
+            let type = Array.isArray(d) ? 'array' : typeof d;
+
+            // if string is SVG - take first geometry element
+            if (type === 'string' && d.startsWith('<svg')) {
+                let svg = new DOMParser().parseFromString(d, 'text/html').querySelector('svg');
+                let allowed = ['path', 'polygon', 'polyline', 'line', 'rect', 'circle', 'ellipse'];
+                let children = [...svg.children].filter(node => { return allowed.includes(node.nodeName.toLowerCase()) })
+                d = children.length ? children[0] : null;
+                if (d) type = 'element'
+            }
+
+            d = type === 'element' ? getPathDataFromEl(d).map( com=>{return `${com.type} ${com.values.join(' ')}`}) : parsePathDataNormalized(d)
+            */
+
+            //console.log('example:', d);
             path.setAttribute("d", d);
 
 

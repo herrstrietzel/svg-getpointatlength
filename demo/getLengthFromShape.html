@@ -30,34 +30,28 @@
 
 
     <!-- 
-        
+            <script src="../getPointAtLengthLookup.js"></script>
+            <script src="../shapeToPath.js"></script>
+            <script src="../dist/svg-getpointatlength.js"></script>
+
     -->
     
-    <script src="../shapeToPath.js"></script>
-    <script src="../getPointAtLengthLookup.js"></script>
 
 
 
-    <script>
 
+
+    <script type="module">
+
+        import {getPathLengthLookup, getPathDataFromEl} from '../dist/svg-getpointatlength.esm.js';
 
         let svg = document.querySelector('svg')
         let els = svg.querySelectorAll('path, polygon, polyline, line, circle, ellipse, rect')
 
         els.forEach(el => {
 
-            //let pathData = getPathDataFromEl(el)
-
-            let d = `m3 7 10 0m-10 10 10 0v10h10v10h10c0 6 5 10 10 10 0 5 5 10 10 10s10 10 10 10-10 10 10 10q-23-27 0-20 20-5 0-10t-3-7 0-15
-    a5 10 45 10-30-5 5 
-    5 20 01-10-10z` 
-
-    d= `<svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg">
-        <defs></defs>
-        <ellipse id="r" cx="25%" cy="25%" rx="25%" ry="25%" fill="#D9D9D9" />
-    </svg>`
-
-            let lookup = getPathLengthLookup(d)
+            let pathData = getPathDataFromEl(el)
+            let lookup = getPathLengthLookup(pathData)
 
             let lenN = el.getTotalLength()
             console.log(lookup, 'lenN', lenN);

@@ -144,8 +144,6 @@
                 <!-- pathdata getPointAtLength -->
                 <circle id="split" cx="0" cy="0" r="1%" fill="orange" fill-opacity="1" />
 
-
-
             </svg>
         </div>
 
@@ -180,20 +178,20 @@
 
 
 
-
-        <script src="../getPointAtLengthLookup.js"></script>
-
-
+<script src="../dist/svg-getpointatlength.js"></script>
         <!-- 
-    <script src="../getPointAtLengthLookup.js"></script>
 
+        <script src="https://cdn.jsdelivr.net/npm/svg-getpointatlength@latest/getPointAtLengthLookup.js"></script>
 
-
-            <script src="../pathDataGetBBox.js"></script>
         -->
 
-        <script src="../getPointAtLengthLookup_getArea.js"></script>
         <script src="path_samples.js"></script>
+
+
+
+
+
+
 
 
         <script>
@@ -222,7 +220,7 @@
                 inputExample.append(option);
             }
 
-            let first = inputExample.options[0];
+            let first = inputExample.options[8];
             first.selected = true;
             svgInput.value = first.value;
 
@@ -293,7 +291,7 @@
                     let el = children.length ? children[0] : null;
 
                     let pathData = getPathDataFromEl(el)
-                    d = pathData.map(com=>{return [com.type, ...com.values] }).flat().join(' ')
+                    d = pathData.map(com => { return [com.type, ...com.values] }).flat().join(' ')
                 }
 
                 let path = document.querySelector('path, polygon, polyline, line, rect, circle, ellipse')
@@ -323,10 +321,11 @@
 
 
                 // get area
-                let pathData = parsePathDataNormalized(d, { arcToCubic: false })
+                let pathData = pathLengthLookup.pathData;
                 //console.log(pathData);
 
-                let area = getPathArea(pathData)
+                //let area = getPathArea(pathData)
+                let area = 0
 
                 // only pathLength
                 //totalLengthSimple = getPathLengthFromD(d, quality)
@@ -349,6 +348,7 @@
                 let pt = pathLengthLookup.getPointAtLength(currentLength, getTangent, getSegment);
                 let { angle } = pt;
 
+
                 //console.log('pathLengthLookup:', pathLengthLookup, angle);
 
                 tangent.setAttribute('x1', pt.x)
@@ -356,6 +356,9 @@
 
                 let tangetLen = totalLength / 25;
                 let pT = getTangentPt(pt, tangetLen, angle - Math.PI / 2)
+
+                //console.log('angle', angle, pT);
+
 
                 tangent.setAttribute('x2', pT.x)
                 tangent.setAttribute('y2', pT.y)
@@ -402,7 +405,6 @@
                 let dSeg = pathDataSeg.map(com => { return `${com.type} ${com.values.join(' ')}` }).join(' ')
                 segAtPoint.setAttribute('d', dSeg)
                 segment.textContent = '  index:' + pt.index + ' pathdata:' + dSeg;
-
 
             }
 

@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Split path</title>
+
+    <style>
+        svg {
+            display: block;
+            outline: 1px solid #ccc;
+            overflow: visible;
+        }
+
+        input {
+            width: 100%;
+            display: block
+        }
+
+        .grd {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1em;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 10em;
+        }
+    </style>
+
+    <script src="../dist/svg-getpointatlength.js"></script>
+
+
+    <script>
+
+        function renderPoint(
+            svg,
+            coords,
+            fill = "red",
+            r = "1%",
+            opacity = "1",
+            title = '',
+            render = true,
+            id = "",
+            className = ""
+        ) {
+            if (Array.isArray(coords)) {
+                coords = {
+                    x: coords[0],
+                    y: coords[1]
+                };
+            }
+            let marker = `<circle class="${className}" opacity="${opacity}" id="${id}" cx="${coords.x}" cy="${coords.y}" r="${r}" fill="${fill}">
+  <title>${title}</title></circle>`;
+
+            if (render) {
+                svg.insertAdjacentHTML("beforeend", marker);
+            } else {
+                return marker;
+            }
+        }
+
+    </script>
+
+
+</head>
+
+<body>
+
+    <h1>Split path at length</h1>
+    <p>
+        <input id="inputLength" type="range" min="0" max="100000" step="1" value="600">
+    </p>
+
+    <svg id="svg" viewBox="0 20 300 100">
+
+        <path id="path" d="M0 100 Q 50 0 100 50 C 133.33 83.33 166.67 83.33 200 50 
+           A 50 25 20 1 1 275 100 z" fill="none" stroke="#ccc" />
+
+        <path id="pathSeg" d="" fill="none" stroke="blue" opacity="0.5" stroke-width="3" />
+
+        <path id="path1" d="" fill="none" stroke="green" />
+        <path id="path2" d="" fill="none" stroke="red" />
+
+        <circle id="c" cx="0" cy="0" r="3" fill="purple" />
+
+    </svg>
+
+    <div class="grd">
+
+        <div class="col">
+            <textarea id="m1"></textarea>
+        </div>
+        <div class="col">
+            <textarea id="m2"></textarea>
+        </div>
+
+    </div>
+
+
+
+    <script>
+
+        let d = path.getAttribute('d');
+        let lookup = getPathLengthLookup(d);
+        let { totalLength, pathData } = lookup;
+        console.log(lookup);
+
+        // init
+        inputLength.max = totalLength;
+        update()
+
+
+        inputLength.addEventListener('input', e => {
+            update()
+        })
+
+        function update() {
+
+            let getTangent = true,
+                getSegment = false;
+
+            let len = +inputLength.value
+            let pt = lookup.getPointAtLength(len, getTangent, getSegment);
+            //console.log(len, pt);
+
+
+            let segment = lookup.getSegmentAtLength(len);
+            pathSeg.setAttribute('d', segment.d)
+
+            //console.log('segment', segment);
+
+            /*
+            */
+
+
+            let { x, y } = pt;
+            c.setAttribute('cx', pt.x)
+            c.setAttribute('cy', pt.y)
+
+
+            /**
+             * get segments
+             * and split paths
+             */
+
+            let splitPathData = lookup.splitPathAtLength(len)
+            //console.log('splitPathData', JSON.stringify(splitPathData, null, ' ') );
+            let [d1, d2] = splitPathData.dArr;
+
+            path1.setAttribute('d', d1)
+            path2.setAttribute('d', d2)
+
+            m1.value = d1
+            m2.value = d2
+
+        }
+
+
+
+
+    </script>
+
+
+
+</body>
+
+</html>
