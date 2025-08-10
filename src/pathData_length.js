@@ -1,9 +1,9 @@
-import { lgVals, deg2rad, rad2deg, PI2 } from './constants.js';
-import { checkFlatnessByPolygonArea, svgArcToCenterParam, getAngle, getLegendreGaussValues, toParametricAngle, getEllipseLengthLG, pointAtT, getLength, cubicBezierLength2 } from './geometry';
+import { lgVals, deg2rad, rad2deg, PI2, PI_half } from './constants.js';
+import { checkFlatnessByPolygonArea, svgArcToCenterParam, getAngle, getLegendreGaussValues, toParametricAngle, getEllipseLengthLG, pointAtT, getLength, normalizeAngle } from './geometry';
 //import { getPathDataFromEl } from './pathData_parse_els.js';
 //import {PathLengthObject} from './point_at_length.js';
 
-import { getCommandLength } from './pathData_getCommandLength.js'
+//import { getCommandLength } from './pathData_getCommandLength.js'
 //import { parsePathDataNormalized_old } from './pathData_parse.js';
 
 //const lgVals = {}
@@ -12,8 +12,6 @@ const {
     abs, acos, asin, atan, atan2, ceil, cos, exp, floor,
     log, max, min, pow, random, round, sin, sqrt, tan, PI
 } = Math;
-
-
 
 
 
@@ -53,8 +51,7 @@ export function getPathLengthLookupFromPathData(pathData, precision = 'medium', 
     let lengthLookup = { totalLength: 0, segments: [] };
     let p0
     let options = {}
-
-
+    let tangentAdjust = 0;
 
 
     for (let i = 1; i < l; i++) {
@@ -112,22 +109,23 @@ export function getPathLengthLookupFromPathData(pathData, precision = 'medium', 
                 break;
 
 
-
-
             case "A":
-
+                p = {
+                    x: com.values[5],
+                    y: com.values[6]
+                }
                 let xAxisRotation = com.values[2],
                     largeArc = com.values[3],
                     sweep = com.values[4];
-
-                let xAxisRotation_deg = xAxisRotation;
 
                 // get parametrized arc properties
                 let arcData = svgArcToCenterParam(p0.x, p0.y, com.values[0], com.values[1], com.values[2], largeArc, sweep, p.x, p.y)
                 let { cx, cy, rx, ry, startAngle, endAngle, deltaAngle } = arcData
 
+                // perpendicular adjust for tangents
+                tangentAdjust = !xAxisRotation ? PI*-1 : (!sweep  ? PI * -0.5 : PI * 0.5);
+                tangentAdjust = xAxisRotation<0 ? tangentAdjust*-1 : tangentAdjust;
 
-                options = { type, p0, p, t, rx, ry, startAngle, endAngle, deltaAngle, wa };
 
 
                 /** 
@@ -135,25 +133,52 @@ export function getPathLengthLookupFromPathData(pathData, precision = 'medium', 
                  */
                 if (rx !== ry) {
 
+                    // values are alredy in radians
+                    let degrees = false;
+
+                    // add weight/abscissa values if not existent
+                    let wa_key = `wa${lg}`;
+                    if (!lgVals[wa_key]) {
+                        lgVals[wa_key] = getLegendreGaussValues(lg)
+                    }
+
+                    if (!lgVals['wa48']) {
+                        lgVals['wa48'] = getLegendreGaussValues(48)
+                    }
+
+
+                    wa = lgVals[wa_key];
+                    let wa48 = lgVals['wa48'];
+
                     /** 
                      * convert angles to parametric
                      * adjusted for xAxisRotation
                      * increases performance
                      */
 
+                    // convert x-axis-rotation to radians
+                    xAxisRotation = xAxisRotation * PI / 180;
 
-                    xAxisRotation = xAxisRotation * deg2rad;
+
                     startAngle = toParametricAngle((startAngle - xAxisRotation), rx, ry)
                     endAngle = toParametricAngle((endAngle - xAxisRotation), rx, ry)
+
+                    // recalculate parametrized delta
+                    let delta_param = endAngle - startAngle;
+
+                    let signChange = deltaAngle > 0 && delta_param < 0 || deltaAngle < 0 && delta_param > 0;
+
+                    //deltaAngle = xAxisRotation>0 ? endAngle- startAngle: deltaAngle;
+                    deltaAngle = signChange ? deltaAngle : delta_param;
 
 
                     // adjust end angle
                     if (sweep && startAngle > endAngle) {
-                        endAngle += PI2
+                        endAngle += PI * 2
                     }
 
                     if (!sweep && startAngle < endAngle) {
-                        endAngle -= PI2
+                        endAngle -= PI * 2
                     }
 
                     // precision
@@ -162,28 +187,24 @@ export function getPathLengthLookupFromPathData(pathData, precision = 'medium', 
                     // first length and angle
                     lengthObj.lengths.push(pathLength);
                     lengthObj.angles.push(startAngle);
-                    options = { type, p0, p, t, rx, ry, startAngle, endAngle, deltaAngle, wa };
+
+                    for (let i = 1; i < tDivisionsC; i++) {
+                        let endAngle = startAngle + deltaAngle / tDivisionsC * i;
+                        //lenNew = getEllipseLengthLG(rx, ry, startAngle, endAngle, 0, false, degrees, wa);
+
+                        lenNew = getEllipseLengthLG(rx, ry, startAngle, endAngle, wa)
 
 
-                    // last length
-                    len = getCommandLength(options);
-                    //len = getEllipseLengthLG(rx, ry, startAngle, endAngle, 0, false, false, wa);
-
-
-                    if (!onlyLength) {
-                        for (let i = 1; i < tDivisionsC; i++) {
-                            let endAngle = startAngle + deltaAngle / tDivisionsC * i;
-                            //lenNew = getEllipseLengthLG(rx, ry, startAngle, endAngle, 0, false, false, wa);
-                            //options.endAngle = endAngle;
-                            lenNew = getCommandLength({ type, p0, p, t, rx, ry, startAngle, endAngle, wa });
-
-                            lengthObj.lengths.push(lenNew + pathLength)
-                            lengthObj.angles.push(endAngle)
-                        }
+                        len += lenNew;
+                        lengthObj.lengths.push(lenNew + pathLength)
+                        lengthObj.angles.push(endAngle)
                     }
 
                     // last angle
                     lengthObj.angles.push(endAngle);
+
+                    // last length - use higher precision
+                    len = getEllipseLengthLG(rx, ry, startAngle, endAngle, wa48)
 
 
                 }
@@ -195,26 +216,15 @@ export function getPathLengthLookupFromPathData(pathData, precision = 'medium', 
                      * perfect circle length can be linearly interpolated 
                      * according to delta angle
                      */
-
-                    len = getCommandLength(options);
-
+                    len = 2 * PI * rx * (1 / 360 * Math.abs(deltaAngle * 180 / PI))
+                    //len = PI2 * rx * Math.abs(deltaAngle)/PI2
 
                     if (getTangent) {
+                        let startA = deltaAngle < 0 ? startAngle - PI : startAngle;
+                        let endA = deltaAngle < 0 ? endAngle - PI : endAngle;
 
-
-                        /*
-                        let startA = deltaAngle < 0 ? startAngle - Math.PI : startAngle;
-                        let endA = deltaAngle < 0 ? endAngle - Math.PI : endAngle;
-                        */
-                        /*
-                        */
-                       let startA = startAngle;
-                       let endA = endAngle;
-
-                        //console.log(startA*rad2deg, endA*rad2deg);
                         // save only start and end angle
-                        lengthObj.angles = [startA + Math.PI * 0.5, endA + Math.PI * 0.5];
-                        //lengthObj.angles = [startA, endA];
+                        lengthObj.angles = [startA + PI_half, endA + PI_half];
                     }
                 }
 
@@ -226,7 +236,8 @@ export function getPathLengthLookupFromPathData(pathData, precision = 'medium', 
                         deltaAngle,
                         endAngle,
                         xAxisRotation,
-                        xAxisRotation_deg,
+                        xAxisRotation_deg: xAxisRotation * rad2deg,
+                        tangentAdjust,
                         largeArc,
                         sweep,
                         rx,
@@ -333,11 +344,9 @@ export function getPathLengthLookupFromPathData(pathData, precision = 'medium', 
 
                         for (let i = 1; i < lgArr.length && !foundAccuracy; i++) {
                             let lgNew = lgArr[i];
-                            //lenNew = getLength(pts, 1, lgNew)
 
                             options.lg = lgNew;
                             lenNew = getCommandLength(options);
-
 
                             //precise enough or last
                             diff = Math.abs(lenNew - len)
@@ -356,14 +365,15 @@ export function getPathLengthLookupFromPathData(pathData, precision = 'medium', 
                 if (!onlyLength && !isFlat) {
 
                     if (getTangent) {
-                        let angleStart = pointAtT(pts, 0, true).angle
+                        let startAngle = pointAtT(pts, 0, true).angle
+                        //console.log('angleStart', angleStart*rad2deg);
 
                         // add only start and end angles for béziers
-                        lengthObj.angles.push(angleStart, pointAtT(pts, 1, true).angle);
+                        lengthObj.angles.push(startAngle, pointAtT(pts, 1, true).angle);
                     }
 
-                    // calculate lengths at sample t division points
 
+                    // calculate lengths at sample t division points
                     let lenN = 0;
 
                     for (let d = 1; d < tDivisions; d++) {
