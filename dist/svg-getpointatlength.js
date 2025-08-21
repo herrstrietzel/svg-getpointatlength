@@ -2516,7 +2516,6 @@
                             }
                         }
                     } else {
-
                         let isSinglePairArr = d[0].length === 2 && !isNaN(d[0][0]) ? true : false;
                         if (isSinglePairArr) {
                             pathData = [{ type: 'M', values: [d[0][0], d[0][1]] }];

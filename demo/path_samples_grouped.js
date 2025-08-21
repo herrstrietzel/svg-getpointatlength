@@ -177,7 +177,7 @@ let samples_grouped =
 
     'not valid': [
         {
-            'text': `Not valid`,
+            'text_nonsense': `Not valid`,
         },
         {
         'invalid_path': ` 44.415 34.5 C 44.415 34.5 C42.393,38`
