@@ -1,7 +1,7 @@
 [![npm version](https://img.shields.io/npm/v/svg-getpointatlength)](https://www.npmjs.com/package/svg-getpointatlength)
 [![license](https://img.shields.io/npm/l/svg-getpointatlength)](https://www.npmjs.com/package/svg-getpointatlength)
 [![CDN](https://img.shields.io/badge/CDN-jsDelivr-E84D3D?style=flat)](https://cdn.jsdelivr.net/npm/svg-getpointatlength@latest/getPointAtLengthLookup.min.js)
-[![CDN](https://img.shields.io/badge/CDN-unpkg-blue?style=flat)](https://www.unpkg.com/svg-getpointatlength@latest/getPointAtLengthLookup.js)
+[![CDN](https://img.shields.io/badge/CDN-unpkg-blue?style=flat)](https://www.unpkg.com/svg-getpointatlength@latest/dist/svg-getpointatlength.js)
 
 
 <p align="center" style="text-align:center">
@@ -64,20 +64,24 @@ This way you can efficiently calculate hundreds of points on a path without sacr
 ### Browser
 
 Load JS locally or via cdn
+
+
+
 ```
-<script src="https://cdn.jsdelivr.net/npm/svg-getpointatlength@latest/getPointAtLengthLookup.js"></script>
+// ESM
+<script src="https://cdn.jsdelivr.net/npm/svg-getpointatlength@latest/+esm"></script>
+
+
+// IIFE
+<script src="https://cdn.jsdelivr.net/npm/svg-getpointatlength@latest/dist/svg-getpointatlength.min.js"></script>
 ```
 
 or (unpkg.com version)
 
 ``` lang-html
-<script src="https://www.unpkg.com/svg-getpointatlength@latest/getPointAtLengthLookup.js"></script>
+<script src="https://www.unpkg.com/svg-getpointatlength@latest/dist/svg-getpointatlength.js"></script>
 ```
 
-or minified version (~ 12KB/6KB gzipped) 
-```
-<script src="https://cdn.jsdelivr.net/npm/svg-getpointatlength@latest/getPointAtLengthLookup.min.js"></script>
-```
 
 **Example: calculate path length from pathData**  
 
