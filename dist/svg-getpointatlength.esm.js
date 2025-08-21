@@ -2705,6 +2705,12 @@ function getPathLengthLookup$1(d, precision = 'medium', onlyLength = false, getT
 }
 
 // simple length calculation
+function getPathLengthFromD(d, precision = 'medium', onlyLength = true) {
+    let pathData = normalizePathInput(d);
+    return getPathDataLength(pathData, precision, onlyLength);
+}
+
+// simple length calculation
 function getPathLength(d, precision = 'medium', onlyLength = true) {
     let pathData = normalizePathInput(d);
     return getPathDataLength(pathData, precision, onlyLength);
@@ -4367,6 +4373,7 @@ if (typeof window !== 'undefined') {
     window.getPathLengthLookup = getPathLengthLookup$1;
     window.getPathLookup = getPathLookup;
     window.getPathLength = getPathLength;
+    window.getPathLengthFromD = getPathLengthFromD;
     window.parsePathDataString = parsePathDataString;
     window.normalizePathInput = normalizePathInput;
     window.parsePathDataNormalized = parsePathDataNormalized$1;
@@ -4379,4 +4386,4 @@ if (typeof window !== 'undefined') {
 
 }
 
-export { PI, Path2D_svg, abs, acos, asin, atan, atan2, ceil, cos, exp, floor, getPathDataFromEl, getPathLength, getPathLengthLookup$1 as getPathLengthLookup, getPathLookup, getPolygonFromLookup, hypot, log, max, min, normalizePathData, normalizePathInput, parsePathDataNormalized$1 as parsePathDataNormalized, parsePathDataString, pow, random, round, sin, sqrt, stringifyPathData, tan };
+export { PI, Path2D_svg, abs, acos, asin, atan, atan2, ceil, cos, exp, floor, getPathDataFromEl, getPathLength, getPathLengthFromD, getPathLengthLookup$1 as getPathLengthLookup, getPathLookup, getPolygonFromLookup, hypot, log, max, min, normalizePathData, normalizePathInput, parsePathDataNormalized$1 as parsePathDataNormalized, parsePathDataString, pow, random, round, sin, sqrt, stringifyPathData, tan };

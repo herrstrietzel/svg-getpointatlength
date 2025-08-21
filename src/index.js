@@ -7,7 +7,7 @@ import { normalizePathInput } from './normalizeInput.js';
 import { getPathDataFromEl } from './pathData_parse_els.js';
 
 // length and lookup
-import { PathLengthObject, getPathLookup, getPathLengthLookup, getPathLength } from './get_pathData_length.js';
+import { PathLengthObject, getPathLookup, getPathLengthLookup, getPathLength, getPathLengthFromD } from './get_pathData_length.js';
 
 
 
@@ -91,6 +91,7 @@ export {stringifyPathData as stringifyPathData};
 export { parsePathDataString as parsePathDataString };
 export { getPathDataFromEl as getPathDataFromEl };
 export { getPathLength as getPathLength };
+export { getPathLengthFromD as getPathLengthFromD };
 export { normalizePathInput as normalizePathInput };
 export { normalizePathData as normalizePathData };
 export { parsePathDataNormalized as parsePathDataNormalized };
@@ -103,6 +104,7 @@ if (typeof window !== 'undefined') {
     window.getPathLengthLookup = getPathLengthLookup;
     window.getPathLookup = getPathLookup;
     window.getPathLength = getPathLength;
+    window.getPathLengthFromD = getPathLengthFromD;
     window.parsePathDataString = parsePathDataString;
     window.normalizePathInput = normalizePathInput;
     window.parsePathDataNormalized = parsePathDataNormalized;

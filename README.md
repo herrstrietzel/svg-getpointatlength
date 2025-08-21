@@ -83,6 +83,29 @@ or (unpkg.com version)
 ```
 
 
+#### Minimal »lite« version
+In case you can live without the fancy features introduced in version 2, you may also load the smaller version from the dist directory.  
+
+
+```
+<!--ESM -->
+<script type="module" src="https://cdn.jsdelivr.net/npm/svg-getpointatlength@latest/dist/svg-getpointatlength_lite.esm.js"></script>
+
+
+<!--IIFE -->
+<script src="https://cdn.jsdelivr.net/npm/svg-getpointatlength@latest/dist/svg-getpointatlength_lite.js"></script>
+
+```
+
+This version doesn't include helpers for:  
+* [area](https://github.com/herrstrietzel/svg-getpointatlength?tab=readme-ov-file#get-area) 
+* [bounding box](https://github.com/herrstrietzel/svg-getpointatlength?tab=readme-ov-file#get-bounding-box) 
+* [canvas](https://github.com/herrstrietzel/svg-getpointatlength?tab=readme-ov-file#canvas-helper-path2d_svg) 
+* [segment splitting](https://github.com/herrstrietzel/svg-getpointatlength?tab=readme-ov-file#get-segments-or-split-paths-at-length)
+
+Otherwise it supports all features from version 1.3.x and is ~35–40% smaller.
+
+
 **Example: calculate path length from pathData**  
 
 ```
@@ -121,11 +144,11 @@ console.log(pt)
 ```
 
 #### Length only
-If you only need to retrieve the total length of a path you can use the simplified helper  `getPathLengthFromD()`
+If you only need to retrieve the total length of a path you can use the simplified helper  `getPathLength()`
 
 ```
 // only length – slightly faster as we don't calculate intermediate lengths
-let length = getPathLengthFromD(d)
+let length = getPathLength(d)
 console.log(length)
 ```
 
@@ -215,7 +238,7 @@ let pathData = path.getPathData();
 // stringified path data
 let d = path.getPathDataString();
 ```
-
+See [demo: "canvas_test2.html"](https://herrstrietzel.github.io/svg-getpointatlength/demo/canvas_test2.html)
 
 ## Methods and options
 `getPathLengthLookup(d)` returns a lookup objects including reusable data about ech path segment as well as the total length.  
@@ -248,13 +271,21 @@ Optionally, you can also include tangent angles and segment indices (as well as 
 
 | method | options/agruments | description | default/values |
 |--|--|--|--|
-|`getPathLengthLookup(d, precision, onlyLength, getTangent )` |  `d` | A path data string or a already parsed path data array  | *none* |
+|`getPathLengthLookup(d, precision, onlyLength, getTangent, conversions )` |  `d` | A path data string or a already parsed path data array  | *none* |
 | | `precision` | Specify accuracy for Bézier length calculations. This parameter sets the amount of length intermediate calculations. Default should work even for highly accurate calcuations. Legendre-Gauss approximation is already adaptive  | **`medium`**, `high`, `low` |
 |  | `onlyLength`| skips the lookup creation and returns only the length of a path | `false` |
 |  | `getTangent` | include tangent angles in lookup object (can improve performance)  | true   |
+|  | `conversions` | convert path commands e.g arcs to cubics  | { arcToCubic:false, quadraticToCubic:false}   |
 | `getPointAtLength()` | `length` | gets point at specified length   | *none* |
 |  | `getTangent` | include tangent angles in point object (can improve performance)  | false   |
 |  | `getSegment` | include segment info in object | false  |  
+| `getSegmentAtLength()` | `length` | gets segment at specified length   | *none* |
+|  | `getBBox` | include bounding box data (total and segment)  | true   |
+|  | `getArea` | include area data (total and segment) | true  |  
+
+
+#### Shortcuts/aliases
+Version 2 add a shorter `getPathLookup()` method that works the same way as `getPathLengthLookup()`
 
 ```
 // select path
@@ -266,6 +297,11 @@ let d = path.getAttribute('d')
 // measure path, create lookup
 let pathLengthLookup = getPathLengthLookup(d)
 
+// alternative - get lookup from element
+let pathLengthLookup_from_element = path.getPathLookup()
+let pathLengthLookup_element_input = getPathLengthLookup(path)
+
+
 // get point, tangent and segment
 let length = 100;
 let getTangent = true;
@@ -275,7 +311,6 @@ let pt = pathLengthLookup.getPointAtLength(length, getTangent, getSegment);
 let tangentAngle = pt.angle;
 let segmentIndex = pt.index;
 let segmentCommand = pt.com;
-
 ```
 
 The returned data object will look like this:  
@@ -308,30 +343,36 @@ So you also have info about the current segment the length is in as well as the 
 ### Get segments or split paths at length
 
 #### Get segment at length
-`lookup.getSegmentAtLength(len)` returns the current segment's index as well as the path data:  
+`lookup.getSegmentAtLength(len)` returns the current segment's index as well as the path data, area and bounding box (both optional enabled by default). 
+
+**Usage:**  
+``` 
+// get segment
+let segment = pathLookup.getSegmentAtLength(length);
+let {index, pathData, d, angle, x, y } = segment;
+
+// render current path segment
+path.setAttribute('d', d)
+```
 
 ``` 
-let seg = {
+// returns
+ {
   x: 264.85,
   y: 53.947,
   angle: 1.36,
   d: "M 200 50 A 50 25 20 1 1 275 100",
   pathData: [{…}, {…}],
+  bbox: {x:0, y:0, width:100, height:200},
   t: 0.45,
   index: 3,
 };
-
 ```
 
-**Usage:**  
-``` 
-let segment = lookup.getSegmentAtLength(len);
-let {pathData, d} = segment
+All in all, you may consider `lookup.getSegmentAtLength(len)` as the »big sister« of `pointAtLength()`  as it return pretty much anything you could want to know from a certain point. 
+However, it also adds more calculation at first run. If you only need point data and maybe angles – stick with `pointAtLength()`
 
-// render current path segment
-pathSeg.setAttribute('d', d)
 
-```
 
 ## Get bounding box
 Version 2 introduces a bounding box method which returns a bbox object similar to native SVG `getBBox()`.  
@@ -359,7 +400,7 @@ let lookup = path.getPathLookup();
 let area = lookup.getArea()
 ```
 
-Alternatively you can get all area data calling `getSegmentAtLength()` 
+Alternatively, you can get all area data calling `getSegmentAtLength()` (big sister =) 
 
 ```
 let segmentData = lookup.getSegmentAtLength(10)
@@ -368,7 +409,7 @@ let segmentData = lookup.getSegmentAtLength(10)
 By default `getArea` parameter is enabled: 
 `getSegmentAtLength(length = 0, getBBox = true, getArea=true, decimals=-1)`
 
-
+While the area calculations should be quite accurate – based on proper calculations for each curve/segment type – we **can't accurately calculate areas for self-intersecting paths.**
 
 
 ## Split paths at length
@@ -404,27 +445,6 @@ let [d1, d2] = splitPathData.dArr;
 
 
 
-## Minimal »lite« version
-In case you can live without the fancy features introduced in version 2, you may also load the smaller version from the dist directory.  
-
-
-```
-<!--ESM -->
-<script type="module" src="https://cdn.jsdelivr.net/npm/svg-getpointatlength@latest/dist/svg-getpointatlength_lite.esm.js"></script>
-
-
-<!--IIFE -->
-<script src="https://cdn.jsdelivr.net/npm/svg-getpointatlength@latest/dist/svg-getpointatlength_lite.js"></script>
-
-```
-
-This version doesn't include helpers for:  
-* area 
-* bounding box 
-* canvas 
-* segment splitting
-
-Otherwise it supports all features from version 1.3.x and is ~35–40% smaller.
 
 
 
@@ -618,6 +638,7 @@ You can easily test paths using the [web application](https://herrstrietzel.gith
 
 
 * get point, tangent and segment: [demo](https://herrstrietzel.github.io/svg-getpointatlength/demo/pointAtLength.html) [codepen](https://codepen.io/herrstrietzel/pen/VYZXbwE)
+* [Canvas helper](https://herrstrietzel.github.io/svg-getpointatlength/demo/canvas_test2.html)
 * [getPointAtlength: native vs. lookup](https://codepen.io/herrstrietzel/pen/KKEzdPd)
 * [get point at length – performance/accuracy](https://codepen.io/herrstrietzel/pen/WNWRroO)
 * [get point and area](https://codepen.io/herrstrietzel/pen/wBwmdKv)  

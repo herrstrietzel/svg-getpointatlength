@@ -80,6 +80,13 @@ export function getPathLengthLookup(d, precision = 'medium', onlyLength = false,
 
 
 // simple length calculation
+export function getPathLengthFromD(d, precision = 'medium', onlyLength = true) {
+    let pathData = normalizePathInput(d);
+    return getPathDataLength(pathData, precision, onlyLength);
+}
+
+
+// simple length calculation
 export function getPathLength(d, precision = 'medium', onlyLength = true) {
     let pathData = normalizePathInput(d);
     return getPathDataLength(pathData, precision, onlyLength);

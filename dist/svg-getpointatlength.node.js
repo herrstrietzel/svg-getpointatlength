@@ -2707,6 +2707,12 @@ function getPathLengthLookup$1(d, precision = 'medium', onlyLength = false, getT
 }
 
 // simple length calculation
+function getPathLengthFromD(d, precision = 'medium', onlyLength = true) {
+    let pathData = normalizePathInput(d);
+    return getPathDataLength(pathData, precision, onlyLength);
+}
+
+// simple length calculation
 function getPathLength(d, precision = 'medium', onlyLength = true) {
     let pathData = normalizePathInput(d);
     return getPathDataLength(pathData, precision, onlyLength);
@@ -4369,6 +4375,7 @@ if (typeof window !== 'undefined') {
     window.getPathLengthLookup = getPathLengthLookup$1;
     window.getPathLookup = getPathLookup;
     window.getPathLength = getPathLength;
+    window.getPathLengthFromD = getPathLengthFromD;
     window.parsePathDataString = parsePathDataString;
     window.normalizePathInput = normalizePathInput;
     window.parsePathDataNormalized = parsePathDataNormalized$1;
@@ -4394,6 +4401,7 @@ exports.exp = exp;
 exports.floor = floor;
 exports.getPathDataFromEl = getPathDataFromEl;
 exports.getPathLength = getPathLength;
+exports.getPathLengthFromD = getPathLengthFromD;
 exports.getPathLengthLookup = getPathLengthLookup$1;
 exports.getPathLookup = getPathLookup;
 exports.getPolygonFromLookup = getPolygonFromLookup;
