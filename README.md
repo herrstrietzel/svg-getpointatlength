@@ -4,7 +4,11 @@
 [![CDN](https://img.shields.io/badge/CDN-unpkg-blue?style=flat)](https://www.unpkg.com/svg-getpointatlength@latest/getPointAtLengthLookup.js)
 
 
-# svg-getpointatlength 
+<p align="center" style="text-align:center">
+<img width="100" height="100" style="display:inline-block" src="./favicon.svg">
+<h1 align="center">svg-getpointatlength</h1>
+</p> 
+
 Calculates a path's **length** or **points** as well as **tangent angles** at length based on raw pathdata strings.  
 This library aims to work as a performant workaround to emulate natively supported browser methods `getTotalLength()` and `getPointAtLength()` in a non-rendered environment such as node or virtual DOM applications or canvas.  
 
