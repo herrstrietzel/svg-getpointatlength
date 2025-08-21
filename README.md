@@ -409,7 +409,13 @@ In case you can live without the fancy features introduced in version 2, you may
 
 
 ```
-<script src="../dist/svg-getpointatlength_lite.js"></script>
+<!--ESM -->
+<script src="https://cdn.jsdelivr.net/npm/svg-getpointatlength@latest/dist/svg-getpointatlength_lite.esm.js"></script>
+
+
+<!--IIFE -->
+<script src="https://cdn.jsdelivr.net/npm/svg-getpointatlength@latest/dist/svg-getpointatlength_lite.js"></script>
+
 ```
 
 This version doesn't include helpers for:  
