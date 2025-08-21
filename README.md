@@ -611,7 +611,7 @@ For debugging you may also test your path with this [**codepen testbed**](https:
 You can easily test paths using the [web application](https://herrstrietzel.github.io/svg-getpointatlength): 
 
 
-* [get point, tangent and segment](https://codepen.io/herrstrietzel/pen/VYZXbwE)
+* get point, tangent and segment: [demo](https://herrstrietzel.github.io/svg-getpointatlength/demo/pointAtLength.html) [codepen](https://codepen.io/herrstrietzel/pen/VYZXbwE)
 * [getPointAtlength: native vs. lookup](https://codepen.io/herrstrietzel/pen/KKEzdPd)
 * [get point at length – performance/accuracy](https://codepen.io/herrstrietzel/pen/WNWRroO)
 * [get point and area](https://codepen.io/herrstrietzel/pen/wBwmdKv)  
