@@ -410,7 +410,7 @@ In case you can live without the fancy features introduced in version 2, you may
 
 ```
 <!--ESM -->
-<script src="https://cdn.jsdelivr.net/npm/svg-getpointatlength@latest/dist/svg-getpointatlength_lite.esm.js"></script>
+<script type="module" src="https://cdn.jsdelivr.net/npm/svg-getpointatlength@latest/dist/svg-getpointatlength_lite.esm.js"></script>
 
 
 <!--IIFE -->
