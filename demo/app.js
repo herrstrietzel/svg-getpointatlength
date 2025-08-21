@@ -183,7 +183,7 @@ function update(settings) {
         ideal = sampleItem && sampleItem.res ? sampleItem.res : ''
     }
 
-    console.log(pathData);
+    //console.log(pathData);
     //console.log('settings', settings, lookup, ind);
 
     // render path 
