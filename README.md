@@ -1,6 +1,4 @@
 [![npm version](https://img.shields.io/npm/v/svg-getpointatlength)](https://www.npmjs.com/package/svg-getpointatlength)
-[![gzipped size](https://img.shields.io/bundlephobia/minzip/svg-getpointatlength)](https://bundlephobia.com/result?p=svg-getpointatlength)
-[![minified size](https://img.shields.io/bundlephobia/min/svg-getpointatlength)](https://bundlephobia.com/result?p=svg-getpointatlength)
 [![license](https://img.shields.io/npm/l/svg-getpointatlength)](https://www.npmjs.com/package/svg-getpointatlength)
 [![CDN](https://img.shields.io/badge/CDN-jsDelivr-E84D3D?style=flat)](https://cdn.jsdelivr.net/npm/svg-getpointatlength@latest/getPointAtLengthLookup.min.js)
 [![CDN](https://img.shields.io/badge/CDN-unpkg-blue?style=flat)](https://www.unpkg.com/svg-getpointatlength@latest/getPointAtLengthLookup.js)
