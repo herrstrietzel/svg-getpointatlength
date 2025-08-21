@@ -1,8 +1,41 @@
 import { splitSubpaths } from './pathData_split.js';
-import { getAngle, bezierhasExtreme, getPathDataVertices, svgArcToCenterParam, getSquareDistance, commandIsFlat } from "./geometry";
+import { getAngle, bezierhasExtreme, getPathDataVertices, svgArcToCenterParam, getSquareDistance, commandIsFlat } from "./geometry.js";
 import { getPolygonArea, getPathArea } from './geometry_area.js';
 import { getPolyBBox } from './geometry_bbox.js';
-import { renderPoint, renderPath } from "./visualize";
+import { renderPoint, renderPath } from "./visualize.js";
+
+
+/**
+ * check if path is closed 
+ * either by explicit Z commands
+ * or coinciding start and end points
+ */
+
+
+export function checkClosePath(pathData){
+
+    let pathDataL = pathData.length;
+    let closed = pathData[pathDataL - 1]["type"] == "Z" ? true : false;
+
+    if(closed){
+        //console.log('is closed');
+        return true
+    }
+
+    let M = pathData[0];
+    let [x0, y0] = [M.values[0], M.values[1]].map(val => { return +val.toFixed(8) });
+    let lastCom = pathData[pathDataL - 1];
+    let lastComL = lastCom.values.length;
+
+    //check distance between start and end
+    let [xE, yE] = [lastCom.values[lastComL - 2], lastCom.values[lastComL - 1]].map(val => { return +val.toFixed(8) });
+
+    let closedByCoords = x0 === xE && y0 === yE
+    //console.log('closedByCoords', closedByCoords);
+    if(closedByCoords) return true
+    return false
+
+}
 
 
 

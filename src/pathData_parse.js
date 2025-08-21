@@ -1,19 +1,37 @@
 //import { arcToBezier, quadratic2Cubic } from './convert.js';
 //import { getAngle, bezierhasExtreme, getDistance  } from "./geometry";
-import { pathDataToAbsoluteOrRelative, pathDataToLonghands, cubicToArc } from './pathData_convert.js';
+import { pathDataToAbsoluteOrRelative, pathDataToLonghands, pathDataArcsToCubics, pathDataQuadraticToCubic } from './pathData_convert.js';
+
 
 
 /**
  * parse normalized
  */
 
-export function parsePathDataNormalized(d, options = {}) {
+export function normalizePathData(pathData = [],
+    {
+        toAbsolute = true,
+        toLonghands = true,
+        quadraticToCubic = false,
+        arcToCubic = false,
+        arcAccuracy = 4,
+    } = {},
 
-    //let t0 = performance.now()
-    let pathDataObj = parse(d);
+    {
+        hasRelatives = true, hasShorthands = true, hasQuadratics = true, hasArcs = true, testTypes = false
+    } = {}
+) {
 
-    let { hasRelatives, hasShorthands, hasQuadratics, hasArcs } = pathDataObj;
-    let pathData = pathDataObj.pathData;
+    // pathdata properties - test= true adds a manual test 
+    if (testTypes) {
+        //console.log('test for conversions');
+        let commands = Array.from(new Set(pathData.map(com => com.type))).join('');
+        hasRelatives = /[lcqamts]/gi.test(commands);
+        hasQuadratics = /[qt]/gi.test(commands);
+        hasArcs = /[a]/gi.test(commands);
+        hasShorthands = /[vhst]/gi.test(commands);
+        isPoly = /[mlz]/gi.test(commands);
+    }
 
 
     /**
@@ -21,8 +39,48 @@ export function parsePathDataNormalized(d, options = {}) {
      * convert to all absolute
      * all longhands
      */
-    if (hasRelatives) pathData = pathDataToAbsoluteOrRelative(pathData, false);
-    if (hasShorthands) pathData = pathDataToLonghands(pathData, -1, false);
+
+    if ((hasQuadratics && quadraticToCubic) || (hasArcs && arcToCubic)) {
+        toLonghands = true
+        toAbsolute = true
+    }
+
+    if (hasRelatives && toAbsolute) pathData = pathDataToAbsoluteOrRelative(pathData, false);
+    if (hasShorthands && toLonghands) pathData = pathDataToLonghands(pathData, -1, false);
+    if (hasArcs && arcToCubic) pathData = pathDataArcsToCubics(pathData, arcAccuracy);
+    if (hasQuadratics && quadraticToCubic) pathData = pathDataQuadraticToCubic(pathData);
+
+    return pathData;
+
+}
+
+export function parsePathDataNormalized(d,
+    {
+        // necessary for most calculations
+        toAbsolute = true,
+        toLonghands = true,
+
+        // not necessary unless you need cubics only
+        quadraticToCubic = false,
+
+        // mostly a fallback if arc calculations fail      
+        arcToCubic = false,
+        // arc to cubic precision - adds more segments for better precision     
+        arcAccuracy = 4,
+    } = {}
+) {
+
+
+    let pathDataObj = parsePathDataString(d);
+    let { hasRelatives, hasShorthands, hasQuadratics, hasArcs } = pathDataObj;
+    let pathData = pathDataObj.pathData;
+
+    // normalize
+    pathData = normalizePathData(pathData,
+        { toAbsolute, toLonghands, quadraticToCubic, arcToCubic, arcAccuracy },
+        //{test:true}
+        { hasRelatives, hasShorthands, hasQuadratics, hasArcs }
+    )
 
     return pathData;
 }
@@ -78,7 +136,7 @@ paramCountsArr[0x7A] = 0
 
 
 
-export function parse(d, debug = true) {
+export function parsePathDataString(d, debug = true) {
 
     d = d.trim();
 
@@ -158,7 +216,7 @@ export function parse(d, debug = true) {
             } else {
                 // error: leading zeroes
                 if (debug && val[1] && val[1] !== '.' && val[0] === '0') {
-                    feedback = 'Leading zeros not valid: ' + val
+                    feedback = `${itemCount}. command: Leading zeros not valid: ${val}`
                     log.push(feedback)
                 }
                 pathData[itemCount].values.push(+val);
@@ -231,24 +289,22 @@ export function parse(d, debug = true) {
     let isE = false;
     let isMinusorPlus = false;
     let isDot = false;
-    let charCode;
-
 
 
     while (i < len) {
 
-        charCode = d.charCodeAt(i);
-        
+        let charCode = d.charCodeAt(i);
+
         let isDigit = (charCode > 47 && charCode < 58);
         if (!isDigit) {
-             isE = (charCode === 101 || charCode === 69);
-             isMinusorPlus = (charCode === 45 || charCode === 43);
-             isDot = charCode === 46;
+            isE = (charCode === 101 || charCode === 69);
+            isMinusorPlus = (charCode === 45 || charCode === 43);
+            isDot = charCode === 46;
         }
 
-
         /**
-         * digit, dot or operator
+         * number related:
+         * digit, e-notation, dot or -/+ operator
          */
 
         if (
@@ -256,8 +312,8 @@ export function parse(d, debug = true) {
             isMinusorPlus ||
             isDot ||
             isE
-
         ) {
+
 
             // minus or float/dot separated: 0x2D=hyphen; 0x2E=dot
             if (!wasE && (charCode === 0x2D || charCode === 0x2E)) {
@@ -295,10 +351,34 @@ export function parse(d, debug = true) {
 
 
         /**
+         * Separated by white space 
+         */
+        if ((charCode < 48 || charCode > 5759) && isSpace(charCode)) {
+
+            // push value
+            pushVal()
+
+            i++;
+            continue;
+        }
+
+
+        /**
          * New command introduced by
          * alphabetic A-Z character
          */
-        if (charCode > 64 && commandSet.has(charCode)) {
+        if (charCode > 64) {
+
+            // is valid command
+            let isValid = commandSet.has(charCode);
+
+            if (!isValid) {
+                feedback = `${itemCount}. command "${d[i]}" is not a valid type`;
+                log.push(feedback);
+                i++
+                continue
+            }
+
 
             // command is concatenated without whitespace
             if (val !== '') {
@@ -338,22 +418,16 @@ export function parse(d, debug = true) {
         }
 
 
-
-        /**
-         * Separated by White space 
-         */
-        if ((charCode < 48 || charCode > 5759) && isSpace(charCode)) {
-
-            // push value
-            pushVal()
-
-            wasE = false;
-            i++;
-            continue;
+        // exceptions - prevent infinite loop
+        if (!isDigit) {
+            feedback = `${itemCount}. ${d[i]} is not a valid separarator or token`;
+            log.push(feedback);
+            val = '';
         }
 
-    }
+        i++;
 
+    }
 
     // final value
     pushVal()
@@ -394,3 +468,10 @@ export function parse(d, debug = true) {
     }
 
 }
+
+
+
+export function stringifyPathData(pathData) {
+    return pathData.map(com => { return `${com.type} ${com.values.join(' ')}` }).join(' ');
+}
+

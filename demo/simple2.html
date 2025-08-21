@@ -6,6 +6,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
 
+    <script src="https://cdn.jsdelivr.net/npm/path-data-polyfill@1.0.10/path-data-polyfill.min.js"></script>
+
+
     <script>
 
         function renderPoint(
@@ -37,12 +40,12 @@
 
     </script>
 
-<!-- 
+    <!-- 
     <script src="https://cdn.jsdelivr.net/npm/svg-getpointatlength@latest/getPointAtLengthLookup.js"></script>
         
 -->
 
-<script src="../dist/svg-getpointatlength.js"></script>
+    <script src="../dist/svg-getpointatlength.js"></script>
 
 
 
@@ -75,41 +78,56 @@
         let d = path.getAttribute('d');
 
         let d2 = `  
-        m 50,0 .00001.0001.001 10e-10 Q 36.4 0 24.8 6.8t-18 18  t-6.8 25.2 C 0 63.8 5.6 76.3 14.65 85.35 s 21.55 14.65 35.35 14.65 a 50 25-45 0115.8-34.3 50 25 -45 0134.2 -25.7h -20-.5 v -12.5-12.5 H 75 50 V 0 z M 40 60 h-20 V 20h 18 .5.5.5.5z   m-5-35 c0 10 0 15 0 30 q-5 0 -10 0v-30zh-10 v20 h 7e-10 666  `;
+        m 50,0 .00001.0001.001 10e-10 Q 36.4 0 24.8 6.8t-18 18  t-6.8 25.2 C 0 63.8 5.6 76.3 14.65 85.35 s 21.55 14.65 35.35 14.65 a 50 25-45 0115.8-34.3 50 25 -45 0134.2 -25.7h -20-.5 v -12.5-12.5 H 75 50 V 0 z M 40 60 h-20 V 20h 18 .5.5.5.5z   m-5-35 c0 10 0 15 0 30 q-5 0 -10 0v-30zh-10 v20 h 5`;
 
-        d= d2;
+        d = d2;
         path.setAttribute('d', d)
 
         //d2 = d2+d2+d2+d2+d2
 
-               // parse test
+        // parse test
+
+
+        /*
+
+        let t0 = performance.now()
+        let pathData2 = new svgpath(d2);
+        let t1 = performance.now() - t0
+        console.log(t1, pathData2);
 
         
-               /*
-               
-               let t0 = performance.now()
-               let pathData2 = new svgpath(d2);
-               let t1 = performance.now() - t0
-               console.log(t1, pathData2);
-        
-        */ 
+ 
+ */
 
-        
-       let t0 = performance.now()
-       let parsed = parse(d2, true)
-       let t1 = performance.now() - t0
-       console.log(t1, parsed);
-       
 
-        
+        let t0 = performance.now()
+        let parsed = parse(d2, true)
+        let t1 = performance.now() - t0
+        console.log(t1, parsed);
+
+
+
+        // normalized
+        let options = {
+            //arcToCubic:true,
+            //arcAccuracy: 2,
+            //quadraticToCubic: true
+        };
+        let pathdataNorm = parsePathDataNormalized(d2, options);
+        console.log('pathdataNorm', pathdataNorm);
+
+
         if (SVGPathElement.prototype.getPathData !== undefined) {
-            console.log('native support');
 
             let pathDataN = path.getPathData();
-            let type = typeof pathDataN;
+            //let type = typeof pathDataN;
+
+            //console.log('native support', pathDataN);
+            console.log('native support', pathDataN);
+
 
             //console.log(pathDataN);
-            //d=pathDataN;
+            d = pathDataN;
         }
 
         /*
@@ -120,12 +138,12 @@
         }
         */
 
-        let precision= 'medium';
+        let precision = 'medium';
         let onlyLength = false;
         let getTangent = true;
         getTangent = false;
 
-        let lookup = getPathLengthLookup(d, precision, onlyLength, getTangent);
+        let lookup = getPathLengthLookup(d, precision, onlyLength, getTangent, options);
 
 
         let len = 200

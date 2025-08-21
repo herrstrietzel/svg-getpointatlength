@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Get point at length</title>
+
+    <link rel="stylesheet" href="styles.css">
+
+    <style>
+    </style>
+
+</head>
+
+<body>
+
+
+
+    <div class="grd">
+        <div class="col">
+            <h3>Get point at length, tangent angle and segment </h3>
+
+            <!-- samples -->
+            <p>
+                <select id="inputExample" class="inputs">
+                </select>
+            </p>
+
+            <h3>Point at length</h3>
+            <p><input id="inputLength" class="inputs" type="range" value="0" min="0" max="1000" step="0.1"><span
+                    id="valLength"></span>
+            </p>
+
+            <h3>Accuracy</h3>
+            <p id="resAcc"></p>
+
+            <h3>Tangent</h3>
+            <p id="tangentAngle"></p>
+
+            <h3>Segment at length</h3>
+            <p>
+                <code id="segment"></code>
+            </p>
+
+            <!-- 
+                <h3>Legendre-Gauss lookup precision for cubic beziers (0=auto – adjust accuracy) <span id="lgVal"></span>
+                </h3>
+                <p><input id="inputLg" class="inputs" type="range" value="0" max="128" step="1"></p>
+            -->
+
+            <h3>Quality</h3>
+            <p>
+                <select class="inputs" id="inputQ">
+                    <option value="low">low</option>
+                    <option value="medium" selected>medium</option>
+                    <option value="high">high</option>
+                </select>
+            </p>
+
+            <h3>Path data conversions</h3>
+            <p>
+                <label><input type="checkbox" id="inpArcsToCubics" name="inpArcsToCubics">ArcsToCubics</label>
+
+                <label><input type="checkbox" id="inpQuadraticsToCubics" name="inpQuadraticsToCubics"> Quadratic to
+                    cubic</label>
+
+            </p>
+
+
+            <p id="totalL" style="display:none"></p>
+            <p>Orange point= point calculated from pathpata; black point= calculated from getPointAtlength. Both point
+                should be as congruent as possible.</p>
+
+
+            <h3>Input you pathdata</h3>
+            <textarea id="svgInput">
+    </textarea>
+
+        </div>
+
+        <div class="col">
+
+            <svg id="svg" viewBox="0 0 100 100">
+                <path class="previewPath" d="" />
+                <path id="segAtPoint" d="" fill="none" stroke="green" stroke-width="3%" stroke-opacity="0.5" />
+
+                <!-- tangent angle indicator -->
+                <line id="tangent" x1="0" y1="0" x2="0" y2="0" stroke="green" stroke-width="1%" />
+
+
+                <!-- native getPointAtLength-->
+                <circle id="splitN" cx="0" cy="0" r="2%" fill="blue" fill-opacity="1" />
+
+                <!-- pathdata getPointAtLength -->
+                <circle id="split" cx="0" cy="0" r="1%" fill="orange" fill-opacity="1" />
+
+            </svg>
+        </div>
+
+
+        <script>
+
+
+            function renderPoint(
+                svg,
+                coords,
+                fill = "red",
+                r = "2",
+                opacity = "1",
+                id = "",
+                className = ""
+            ) {
+                //console.log(coords);
+                if (Array.isArray(coords)) {
+                    coords = {
+                        x: coords[0],
+                        y: coords[1]
+                    };
+                }
+
+                let marker = `<circle class="${className}" opacity="${opacity}" id="${id}" cx="${coords.x}" cy="${coords.y}" r="${r}" fill="${fill}">
+  <title>${coords.x} ${coords.y}</title></circle>`;
+                svg.insertAdjacentHTML("beforeend", marker);
+            }
+
+        </script>
+
+        <script src="../dist/svg-getpointatlength_lite.js"></script>
+
+
+
+        <!-- 
+
+<script src="getPointAtLengthLookup_old.js"></script>
+
+
+                    <script src="https://cdn.jsdelivr.net/npm/svg-getpointatlength@1.3.2/getPointAtLengthLookup.js"></script>
+
+
+
+        <script src="https://cdn.jsdelivr.net/npm/svg-getpointatlength@latest/getPointAtLengthLookup.js"></script>
+
+        -->
+
+        <script src="path_samples.js"></script>
+
+
+
+
+
+
+
+
+        <script>
+
+
+            // init
+            let path = document.querySelector('path, polygon, polyline, line, rect, circle, ellipse')
+            let svg = path.closest('svg')
+
+
+            /**
+             * load samples
+             */
+
+            // load examples            
+            for (let i = 0; i < samples.length; i++) {
+                let sample = samples[i]
+                // console.log(sample);
+
+                let key = Object.keys(sample)[0];
+                //console.log(key);
+
+                let option = document.createElement("option");
+                option.value = sample[key];
+                option.innerHTML = key;
+                inputExample.append(option);
+            }
+
+            let first = inputExample.options[0];
+            first.selected = true;
+            svgInput.value = first.value;
+
+
+
+            let d = svgInput.value
+            let steps = 1000
+            let quality = inputQ.value;
+            let resIdeal = ''
+
+
+            let conversions = {
+                arcToCubic: inpArcsToCubics.checked,
+                arcAccuracy: quality === 'high' ? 4 : 2,
+                quadraticToCubic: inpQuadraticsToCubics.checked,
+            }
+
+            let onlyLength = false;
+            let getTangent = true;
+
+            perfStart()
+            //let pathLengthLookup = getPathLengthLookup(pathData, quality)
+            let pathLengthLookup = getPathLengthLookup(d, quality, onlyLength, getTangent, conversions)
+            perfEnd()
+
+
+
+            let totalLength = pathLengthLookup.totalLength
+            let totalLengthN = path.getTotalLength()
+
+            //updateSVG();
+            //updatePointAtlength()
+
+
+            svgInput.addEventListener('input', e => {
+                updateSVG();
+            })
+
+            inputLength.addEventListener('input', e => {
+                updatePointAtlength()
+            })
+
+
+            /**
+             * load samples
+            */
+            inputExample.addEventListener("input", (e) => {
+                // get svg markup
+                let example = inputExample.value;
+                svgInput.value = example;
+
+                let index = e.target.options.selectedIndex;
+                resIdeal = samples[index].res
+
+                d = example;
+                svgInput.dispatchEvent(new Event("input"));
+                updatePointAtlength()
+
+            });
+
+            [inpArcsToCubics, inpQuadraticsToCubics, inputQ].forEach(inp => {
+                inp.addEventListener('input', e => {
+                    updateSVG()
+                })
+            })
+
+
+
+            function updateSVG() {
+                let pathData = normalizePathInput(svgInput.value)
+                d = stringifyPathData(pathData)
+
+                let path = document.querySelector('path, polygon, polyline, line, rect, circle, ellipse')
+
+                path.setAttribute('d', d)
+                totalLengthN = path.getTotalLength()
+
+                // adjust viewBox
+                let vB = path.getBBox()
+                let w = vB.width || 100
+                let h = vB.height || 100
+                svg.setAttribute('viewBox', [vB.x, vB.y, w, h].join(' '))
+
+                updateLength()
+            }
+
+
+            function updateLength() {
+
+
+                let conversions = {
+                    arcToCubic: inpArcsToCubics.checked,
+                    arcAccuracy: quality === 'high' ? 4 : 2,
+                    quadraticToCubic: inpQuadraticsToCubics.checked,
+                }
+
+                let onlyLength = false;
+                let getTangent = true;
+
+
+                // get pathlength lookup
+                quality = inputQ.value;
+                pathLengthLookup = getPathLengthLookup(d, quality, onlyLength, getTangent, conversions)
+                totalLength = pathLengthLookup.totalLength
+
+
+                // get area
+                let pathData = pathLengthLookup.pathData;
+                //console.log(pathData);
+
+                //let area = getPathArea(pathData)
+                let area = 0
+
+                // only pathLength
+                //totalLengthSimple = getPathLengthFromD(d, quality)
+
+
+                updatePointAtlength()
+
+
+            }
+
+
+            function updatePointAtlength() {
+                let value = +inputLength.value
+
+
+                // get point at Length
+                let currentLength = totalLength / steps * value
+                let getTangent = true;
+                let getSegment = true;
+                let pt = pathLengthLookup.getPointAtLength(currentLength, getTangent, getSegment);
+                let { angle } = pt;
+
+
+                //console.log('pathLengthLookup:', pathLengthLookup, angle);
+
+                tangent.setAttribute('x1', pt.x)
+                tangent.setAttribute('y1', pt.y)
+
+                let tangetLen = totalLength / 25;
+                let pT = getTangentPt(pt, tangetLen, angle - Math.PI / 2)
+
+                //console.log('angle', angle, pT);
+
+
+                tangent.setAttribute('x2', pT.x)
+                tangent.setAttribute('y2', pT.y)
+                tangentAngle.textContent = `radians: ${+angle.toFixed(3)}; degrees: ${+(angle * 180 / Math.PI).toFixed(3)}`
+
+                let diffIdeal = resIdeal ? totalLength - resIdeal : 'not specified'
+
+                resAcc.innerHTML = `
+                <strong>length:</strong> ${totalLength} <br>
+                <strong>length Native:</strong> ${totalLengthN} <br>
+                <strong>ideal length:</strong> ${resIdeal} <br>
+                <strong>diff from ideal:</strong> ${diffIdeal} <br>
+                <strong>diff from native:</strong> ${totalLengthN - totalLength} <br>
+                `;
+
+
+                split.setAttribute('cx', pt.x)
+                split.setAttribute('cy', pt.y)
+
+
+                // native method get point at length – just for comparison
+                totalLengthN = path.getTotalLength()
+                //console.log(path);
+
+                let ptN = path.getPointAtLength(totalLengthN / steps * value)
+                splitN.setAttribute('cx', ptN.x)
+                splitN.setAttribute('cy', ptN.y)
+
+
+
+                //segment at point
+                let comSegment = pt.com;
+                //console.log('comSegment', pt, comSegment);
+
+                let pathDataSeg = [
+                    { type: 'M', values: [comSegment.p0.x, comSegment.p0.y] },
+                    { type: comSegment.type, values: comSegment.values },
+                ]
+
+                if (comSegment.type === 'Z') {
+                    pathDataSeg[1].type = 'L'
+                }
+
+                let dSeg = pathDataSeg.map(com => { return `${com.type} ${com.values.join(' ')}` }).join(' ')
+                segAtPoint.setAttribute('d', dSeg)
+                segment.textContent = '  index:' + pt.index + ' pathdata:' + dSeg;
+
+            }
+
+
+
+            function getTangentPt(pt, len = 10, angle) {
+                let ptA = {
+                    x: pt.x + len * Math.cos(angle),
+                    y: pt.y + len * Math.sin(angle)
+                }
+                return ptA
+            }
+
+
+
+            /**
+             * simple performance test
+             */
+
+            function perfStart() {
+                t0 = performance.now();
+            }
+
+            function perfEnd(text = '') {
+                t1 = performance.now();
+                total = t1 - t0;
+                console.log(`excecution time ${text}:  ${total} ms`);
+                return total;
+            }
+
+
+
+            inputExample.dispatchEvent(new Event('input'))
+            inputLength.dispatchEvent(new Event('input'))
+
+
+
+        </script>
+
+</body>
+
+</html>

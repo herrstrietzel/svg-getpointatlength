@@ -1,0 +1,147 @@
+/* reset version 2024-07-15 */
+
+* {
+    box-sizing: border-box;
+}
+
+
+html {
+    overflow-y: scroll;
+    height: 100%;
+    -webkit-text-size-adjust: none;
+    font-size: 10px;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+}
+
+/*inherit body-fontsize*/
+body,
+p,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+tr,
+th,
+td,
+ul,
+ol,
+li,
+blockquote,
+sub,
+sup,
+pre,
+input,
+button,
+select,
+code {
+    font-weight: inherit;
+    font-family: inherit;
+    font-size: 1em;
+    font-kerning: normal;
+    line-height: inherit;
+    color: inherit;
+    margin: 0;
+    text-align: left;
+}
+
+/*** reset basic element ***/
+ol,
+ul,
+li {
+    list-style: none;
+    padding: 0;
+}
+
+table {
+    border-collapse: collapse;
+    border-spacing: 0;
+    width: 100%;
+}
+
+th,
+td {
+    vertical-align: top;
+    border: none;
+
+    p {
+        margin-bottom: 0;
+    }
+}
+
+a {
+    text-decoration: none;
+    color: inherit;
+    border: 0;
+}
+
+a,
+figcaption {
+    word-break: break-word;
+}
+
+b,
+strong {
+    font-weight: bold;
+}
+
+img {
+    border: 0;
+    height: auto;
+}
+
+
+/* media elements */
+img,
+video,
+audio,
+iframe {
+    max-width: 100%;
+    display: block;
+}
+
+
+/*** form elements ***/
+form,
+input,
+textarea,
+select,
+option,
+button,
+option {
+    background-color: inherit;
+    color: inherit;
+    outline: 0px none currentColor;
+    margin: 0;
+}
+
+
+textarea {
+    overflow: auto;
+    resize: vertical;
+    width: 100%;
+    display: block;
+}
+
+button,
+input[type="button"],
+input[type="reset"],
+input[type="submit"] {
+    cursor: pointer;
+}
+
+button[disabled],
+input[disabled] {
+    cursor: default;
+}
+
+
+input[type="search"]::-webkit-search-decoration,
+input[type="search"]::-webkit-search-cancel-button {
+    -webkit-appearance: none;
+}

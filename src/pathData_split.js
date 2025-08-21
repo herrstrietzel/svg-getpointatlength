@@ -149,6 +149,17 @@ export function splitSubpaths(pathData) {
         subPathArr.push(pathData.slice(index, subPathIndices[i + 1]));
     });
 
+    // add indices from path data
+    let ind = 0;
+
+    subPathArr.forEach((sub,s)=>{
+        sub.forEach((com,i)=>{
+            subPathArr[s][i].index = ind;
+            ind++
+        })
+    })
+
+
     return subPathArr;
 }
 

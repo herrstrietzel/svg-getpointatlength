@@ -1,0 +1,234 @@
+/* example styles */
+details {
+  --transition-duration: 0.5s;
+  --marker-icon: '\276F';
+  --marker-scale: scale(1);
+  --marker-translate-baseline: translate(0, 0);
+  --marker-translate: translate(0, 0em);
+  --marker-rotation: rotate(0deg);
+  --marker-icon-size: 1em;
+  --marker-icon-color: inherit;
+  --marker-font-weight:400;
+  --summary-gap: 0.3em;
+
+}
+
+summary {
+  cursor: pointer;
+}
+
+/** 
+  * "Core style": expanding and collapsing 
+  * we need to wrap the detail's content twice
+  * 1. an outer wrap introducing a grid display context
+  * - specifying the transition speed from 0fr to 1fr
+  * 2. an inner content wrap with hidden overflow
+  **/
+
+.details-content {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows var(--transition-duration);
+}
+
+.details-content-expanded {
+  grid-template-rows: 1fr;
+}
+
+.details-content-inner {
+  overflow: hidden;
+}
+
+/* fully expanded - show overflow */
+.details-content-open>.details-content-inner {
+  overflow: visible; 
+}
+
+/*
+:not(.details-content)
+.details-content-inner{
+height:0px;
+}
+*/
+
+
+/* CSS normalization to avoid/mitigate layout shifts */
+.details-wrap summary{
+  padding-left: calc(1em + var(--summary-gap));
+  list-style-type: none;
+  display:flex;
+
+  &:before{
+    content: var(--marker-icon);
+    display:inline-block;
+    text-align: center;
+    width:1em;
+    margin-right: var(--summary-gap);
+    margin-left: calc(-1em - var(--summary-gap));
+    transform-box:fill-box;
+    transform-origin: 50%;
+    transition: transform var(--transition-duration);
+  }
+}
+
+.details-wrap details[open]{
+  & > summary:before{
+    transform : rotate(90deg);
+  }
+}
+
+
+/**
+* hide default detail markers
+*/
+summary.summary {
+  padding-left: 0;
+  list-style-type: none;
+  display: flex;
+  align-items: center;
+  align-items: center;
+  gap: var(--summary-gap);
+  padding-left: 0;
+  position: relative;
+
+  /* hide default summary marker replacements */
+  &:before{
+    content:'';
+    display:none;
+  }
+}
+
+.summary .summary-marker +*{
+  display: inline-block;
+  margin-top:0;
+  margin-bottom:0;
+}
+
+
+.summary::marker,
+.summary::-webkit-details-marker {
+  display: none;
+}
+
+
+
+/**
+* marker animation
+* for expanded and closed state
+*/
+.summary-marker {
+  display: inline-flex;
+  color: var(--marker-icon-color);
+  transition: var(--transition-duration);
+  font-size: var(--marker-icon-size);
+  line-height: 1em;
+  margin-bottom: 0;
+  text-align: center;
+  justify-content: center;
+  width: 1em;
+  transform: var(--marker-translate-baseline) var(--marker-scale) var(--marker-rotation) var(--marker-translate);
+  transform-origin: center;
+  transform-box: fill-box;
+  flex: 0 0 1em;
+  font-weight: var(--marker-font-weight);
+}
+
+
+.summary:has(.summary-marker-round) {
+  --summary-gap: 0.3em;
+}
+
+
+/** define marker icon/symbol: chevron by default **/
+.summary-marker:before {
+  content: var(--marker-icon);
+  display: inline-block;
+}
+
+/** expanded animation **/
+.summary-marker-expanded {
+  --marker-rotation: rotate(90deg);
+  --marker-translate: translate(0em, 0);
+}
+
+
+/** Style: plus/minus style **/
+.summary-marker-plus {
+  --marker-translate-baseline: translate(-0em, 0em);
+  --marker-translate: translate(0, 0);
+  --marker-font-weight:700;
+
+}
+
+.summary-marker-plus.summary-marker-expanded {
+  --marker-rotation: rotate(180deg);
+}
+
+.summary-marker-plus::before {
+  content: '+';
+}
+
+.summary-marker-expanded.summary-marker-plus::before {
+  /* minus sign */
+  content: '\2212';
+}
+
+/** Style: custom icon: hide pseudo if svg icon is specified **/
+.summary-marker-icon *{
+  width:100%;
+  height:auto;
+  }
+
+.summary-marker-icon::before {
+  display: none;
+}
+
+.summary-marker-expanded.summary-marker-icon {
+  /*
+  --marker-translate: translate(0.1em, 0);
+  */
+  --marker-translate: translate(0em, 0);
+}
+
+
+/** round marker style **/
+.summary-marker-round {
+
+  /*
+  --marker-translate-baseline: translate(0, -0.1em);
+  */
+  --marker-translate-baseline: translate(0, 0em);
+  --marker-translate: translate(0, 0);
+
+  background-color: currentcolor;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 1em;
+  height: 1em;
+  padding: 0.1em;
+  box-sizing: content-box;
+}
+
+.summary-marker-icon-inner,
+.summary-marker-round::before,
+.summary-marker-round * {
+  color: #fff
+}
+
+
+/** right alignment: 
+* flip marker via scale() 
+*/
+.summary-marker-right {
+  --marker-scale: scale(-1, 1);
+  order: 1;
+  margin-left: auto;
+}
+
+/*
+.summary-marker{
+  outline: 1px solid #ccc
+  }
+  */

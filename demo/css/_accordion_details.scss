@@ -1,0 +1,33 @@
+
+summary {
+    list-style-type: none;
+    cursor: pointer;
+}
+
+summary::-webkit-details-marker {
+    display: none;
+}
+
+summary::before {
+    content: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' stroke-width='20' fill='none' viewBox='0 0 58 100' id='icn-chevron-right'><path stroke='black' d='M10 15l37.5 37.5l-37.5 37.5'/></svg>");
+    display: inline-block;
+    width: 1em;
+    transition: 0.3s;
+    transform: scale(0.8) rotate(0deg) translate(0em, 0.15em);
+    transform-origin: 50%;
+    font-size: 0.5em;
+    margin-right: 0.75em;
+}
+
+
+details.expanded>summary::before {
+    transform: scale(0.8) rotate(90deg) translate(-0.25em, 0);
+}
+
+.aria-cnt{
+    //transition:0.9s;
+    //overflow:hidden;
+}
+
+
+

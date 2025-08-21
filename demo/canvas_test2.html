@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Untitled</title>
+
+    <style>
+        svg {
+            outline: 1px solid #ccc
+        }
+    </style>
+
+</head>
+
+<body>
+
+
+
+    <!-- partial:index.partial.html -->
+    <canvas id="canvas" width="500" height="300" style="border:1px solid #ccc"></canvas>
+
+    <svg id="svg" width="500" viewBox="0 0 500 300">
+
+        <path id="path1" d="" fill="none" stroke="red" stroke-width="1%" />
+    </svg>
+
+    <!-- 
+      <script src="../dist/svg-getpointatlength.js"></script>
+
+    <script src="canvas2svg.js"></script>
+  -->
+
+
+    <script>
+
+        function getDistance(p1, p2) {
+
+            // check horizontal or vertical
+            if (p1.y === p2.y) {
+                return Math.abs(p2.x - p1.x)
+            }
+            if (p1.x === p2.x) {
+                return Math.abs(p2.y - p1.y)
+            }
+
+            return Math.sqrt(
+                (p2.x - p1.x) ** 2 + (p2.y - p1.y) ** 2
+            );
+        }
+
+        function interpolate(p1, p2, t, getTangent = false) {
+
+            let pt = {
+                x: (p2.x - p1.x) * t + p1.x,
+                y: (p2.y - p1.y) * t + p1.y,
+            };
+
+            if (getTangent) {
+                pt.angle = getAngle(p1, p2)
+
+                // normalize negative angles
+                if (pt.angle < 0) pt.angle += Math.PI * 2
+            }
+
+            return pt
+        }
+
+        function getAngle(p1, p2, normalize = false) {
+            //console.log('getAngle', p1, p2);
+            let angle = Math.atan2(p2.y - p1.y, p2.x - p1.x);
+            // normalize negative angles
+            if (normalize && angle < 0) angle += Math.PI * 2
+            return angle
+        }
+
+
+        function normalizeAngle(angle) {
+            let PI2 = Math.PI * 2;
+            // Normalize to 0-2π range
+            angle = angle % PI2;
+            return angle < 0 ? angle + PI2 : angle;
+        }
+
+        function renderPoint(
+            svg,
+            coords,
+            fill = "red",
+            r = "1%",
+            opacity = "1",
+            title = '',
+            render = true,
+            id = "",
+            className = ""
+        ) {
+            if (Array.isArray(coords)) {
+                coords = {
+                    x: coords[0],
+                    y: coords[1]
+                };
+            }
+            let marker = `<circle class="${className}" opacity="${opacity}" id="${id}" cx="${coords.x}" cy="${coords.y}" r="${r}" fill="${fill}">
+         <title>${title}</title></circle>`;
+
+            if (render) {
+                svg.insertAdjacentHTML("beforeend", marker);
+            } else {
+                return marker;
+            }
+        }
+
+
+    </script>
+
+
+    <script type="module">
+
+        import { getPathLookup } from '../dist/svg-getpointatlength.esm.min.js';
+
+
+        let d_all = ''
+
+        const canvas = document.getElementById("canvas");
+        const ctx = canvas.getContext("2d");
+
+
+        const path = new Path2D_svg();
+
+        // 1. Line (moveTo + lineTo)
+        path.moveTo(50, 50);
+        path.lineTo(150, 50);
+
+        // 2. Quadratic Curve
+        path.moveTo(200, 50);
+        path.quadraticCurveTo(250, 0, 300, 50);
+
+        // 3. Cubic Bezier
+        path.moveTo(350, 50);
+        path.bezierCurveTo(370, 0, 430, 100, 450, 50);
+
+        // 4. Arc (circle section)
+        path.moveTo(100, 150);
+        path.arc(100, 150, 40, Math.PI * 0.2, Math.PI * 1.8, false);
+
+      // 6. Rect
+        path.moveTo(350, 120); // anchor
+        path.rect(350, 120, 80, 60);
+
+        // 7. roundRect (rounded rectangle)
+        path.moveTo(50, 220); // anchor
+        path.roundRect(50, 220, 80, 50, 15);
+
+
+
+        // 5. Ellipse
+        path.moveTo(200, 150);
+        let xRot = Math.PI * 0.25;
+        //xRot =0
+        let ccw = false;
+        let startAngle = -Math.PI * 0.5
+        let endAngle = -Math.PI * 1.25
+
+
+        path.ellipse(250, 150, 60, 30, xRot, startAngle, endAngle, ccw);
+
+
+
+
+
+
+        // 8. arcTo (corner rounding demo)
+        const p0 = { x: 200, y: 220 };
+        const cp1 = { x: 300, y: 220 };
+        const cp2 = { x: 300, y: 270 };
+        const r = 40;
+
+
+        let path2 = new Path2D_svg();
+
+        path2.moveTo(p0.x, p0.y);
+        path2.arcTo(cp1.x, cp1.y, cp2.x, cp2.y, r);
+        path2.lineTo(cp2.x, cp2.y);
+        path2.closePath();
+
+
+        let matrix = new DOMMatrix()
+        .translate(150, -30)
+        .rotate(2)
+        .skewX(-20) 
+        .scale(0.5, 1)
+        .translate(150, 20)
+
+
+        //console.log('matrix', matrix);
+        path.addPath(path2, matrix)
+
+
+        
+        // 9. ClosePath demo (triangle)
+        path.moveTo(400, 220);
+        path.lineTo(450, 220);
+        path.lineTo(425, 270);
+        path.closePath();
+
+        // draw the path
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = "purple";
+        ctx.stroke(path);
+
+        let conversions = {
+            //quadraticToCubic: false,
+            arcToCubic: true,
+        }
+
+        let lookup = path.getPathLookup(conversions)
+        console.log(lookup);
+
+        let pathData = path.getPathData(conversions)
+        console.log('pathData', pathData);
+
+
+        //let d = path.getPathDataString(conversions)
+        let d = path.getD(conversions)
+        console.log(d);
+        path1.setAttribute('d', d)
+
+
+
+        //get lookup from element
+        let lookupEl = path1.getPathLengthLookup();
+        console.log('lookupEl', lookupEl);
+
+    </script>
+
+
+</body>
+
+</html>

@@ -6,7 +6,7 @@
 [![CDN](https://img.shields.io/badge/CDN-unpkg-blue?style=flat)](https://www.unpkg.com/svg-getpointatlength@latest/getPointAtLengthLookup.js)
 
 
-# svg-getpointatlength V2
+# svg-getpointatlength 
 Calculates a path's **length** or **points** as well as **tangent angles** at length based on raw pathdata strings.  
 This library aims to work as a performant workaround to emulate natively supported browser methods `getTotalLength()` and `getPointAtLength()` in a non-rendered environment such as node or virtual DOM applications or canvas.  
 
@@ -16,7 +16,10 @@ This library provides methods to get:
 * **point** coordinates at specified length
 * **tangent angles** (handy for SVG motion path emulations)
 * **segments** at length 
-* **shape support**: length/point-at-length from elements
+* **split segments at length** into separate path data chunks  
+* **shape support**: length/point-at-length from elements  
+* **get bounding box** 
+* **area calculations**
 
 The provided methods calculate points at lengths by measuring all segments lengths and saving them in a **reusable lookup object**.    
 
@@ -110,6 +113,18 @@ let length = getPathLengthFromD(d)
 console.log(length)
 ```
 
+### ES module
+
+``` 
+<script type="module">
+
+  // init
+  import { getPathLookup } from 'svg-getpointatlength.esm.min.js';
+  let lookup = getPathLookup(d)
+  let pt = lookup.getPointAtLength(10)
+
+</script>
+```
 
 ### Node  
 
@@ -152,6 +167,40 @@ let pt = pathLengthLookup.getPointAtLength(totalLength/2)
 console.log(pt)
 ```
 
+
+
+## Path data input
+`getPathLengthLookup(d)` accepts: 
+* stringified path data (as used in `d` attributes)  
+* an already parsed path data array – also native pathData object retrieved by `path.getPathData()` (natively supported in Firefox or via polyfill)
+* SVGGeometry element (including shapes like `<rect>`, `<ellipse>`)
+* SVG markup: all geometry elements are converted to path data
+* polygon data:    
+  + stringified as in `<polygon>` `points` attribute
+  + vertex array like `[{x:1, y:2}, {x:3, y:4}]`
+* cached lookup JSON: you can store the complete stringified lookup object as a JSON and pass it to the lookup function (handy to skip the complex measure process)
+
+
+## Canvas helper: `Path2D_svg()`
+Version 2 adds a custom class `Path2D_svg()` to retrieve lookup data from a `Path2D` object.  
+
+```
+const path = new Path2D_svg();
+path.moveTo(350, 50);
+path.bezierCurveTo(370, 0, 430, 100, 450, 50);
+
+// get lookup
+let lookup = path.getPathLookup();
+let pt = lookup.getPointAtLength(10)
+
+// get path data
+let pathData = path.getPathData();
+
+// stringified path data
+let d = path.getPathDataString();
+```
+
+
 ## Methods and options
 `getPathLengthLookup(d)` returns a lookup objects including reusable data about ech path segment as well as the total length.  
 
@@ -179,7 +228,7 @@ console.log(pt)
 ```
 
 ### Options: get tangent angles or segments at point
-Optionally you can also include tangent angles and segment indices (as well as self contained path data) from the current point-at-length:  
+Optionally, you can also include tangent angles and segment indices (as well as self contained path data) from the current point-at-length:  
 
 | method | options/agruments | description | default/values |
 |--|--|--|--|
@@ -239,6 +288,126 @@ See pointAtLength.html example in demos folder.
 
 So you also have info about the current segment the length is in as well as the `t` value used to interpolate the point.  
 
+
+### Get segments or split paths at length
+
+#### Get segment at length
+`lookup.getSegmentAtLength(len)` returns the current segment's index as well as the path data:  
+
+``` 
+let seg = {
+  x: 264.85,
+  y: 53.947,
+  angle: 1.36,
+  d: "M 200 50 A 50 25 20 1 1 275 100",
+  pathData: [{…}, {…}],
+  t: 0.45,
+  index: 3,
+};
+
+```
+
+**Usage:**  
+``` 
+let segment = lookup.getSegmentAtLength(len);
+let {pathData, d} = segment
+
+// render current path segment
+pathSeg.setAttribute('d', d)
+
+```
+
+## Get bounding box
+Version 2 introduces a bounding box method which returns a bbox object similar to native SVG `getBBox()`.  
+Once you call it the lookup is complemented with bounding box data for the entire path as well as dimensions for each segment.
+
+```
+let {x, y, width, height} = lookup.getBBox()
+```
+
+
+## Get Area
+Version 2 adds an area calculation.  
+This is also handy to get the drawing direction of a path or segment:  
+* area < 0 = counter clockwise
+* area > 0 = clockwise
+
+```
+let lookup = path.getPathLookup();
+
+/** 
+* adds area data to lookup
+* for each segment
+* total path area
+*/
+let area = lookup.getArea()
+```
+
+Alternatively you can get all area data calling `getSegmentAtLength()` 
+
+```
+let segmentData = lookup.getSegmentAtLength(10)
+```
+
+By default `getArea` parameter is enabled: 
+`getSegmentAtLength(length = 0, getBBox = true, getArea=true, decimals=-1)`
+
+
+
+
+## Split paths at length
+`lookup.splitPathAtLength(len)` splits a path at the specified length and returns an object containing:  
+
+* an array of path data chunks (before and after split position)
+* an array of stringified pathdata - to be applied to  a `<path>` `d` attribute directly. See example "split.html".
+* index of original segment   
+
+``` 
+{
+ "pathDataArr": [
+    [
+      {"type": "M","values": [0, 100 ]},
+      {"type": "Q","values": [50, 0, 100, 50]}
+    ],
+    [
+      {"type": "M","values": [0, 100 ]},
+      {"type": "Q","values": [50, 0, 100, 50]}
+    ]
+ ],
+ "dArr": ["M 0 100 ...", "M 0 100 ..."],
+ "index": 3
+}
+
+```
+
+**Usage:**  
+``` 
+let splitPathData = lookup.splitPathAtLength(len)
+let [d1, d2] = splitPathData.dArr;
+```
+
+
+
+## Minimal »lite« version
+In case you can live without the fancy features introduced in version 2, you may also load the smaller version from the dist directory.  
+
+
+```
+<script src="../dist/svg-getpointatlength_lite.js"></script>
+```
+
+This version doesn't include helpers for:  
+* area 
+* bounding box 
+* canvas 
+* segment splitting
+
+Otherwise it supports all features from version 1.3.x and is ~35–40% smaller.
+
+
+
+
+
 ### paths and shapes as input argument (New in version 1.3.0)
 
 `getPathLengthLookup()` now also supports elements these SVGGeometryElements: 
@@ -267,7 +436,7 @@ let pt = pathLengthLookup.getPointAtLength(totalLength/2);
 
 #### Get path data from elements/shapes
 For usage in node.js you need a DOM parser like JSDOM.  
-To retrieve the path data from an element use `getPathDataFromEl(el)` 
+To retrieve the path data from an element use `getPathDataFromEl(el, stringify)` 
 
 ``` 
 let ellipse = document.querySelector('ellipse');
@@ -283,10 +452,22 @@ let {totalLength} = pathLengthLookup;
 let pt = pathLengthLookup.getPointAtLength(totalLength/2);
 ```
 
+As of version 2 you can stringify the path data (for usage as a `d` path attribute) via new parameter:   
+``` 
+let stringify = true;
+let pathDataString = getPathDataFromEl(el, stringify)
+```
+
+
+
+
 
 ## Updates and Versions
 
 ### Changelog
+* Version 2: 
+  + improved input normalization: accepts SVG DOM elements, native pathData objects (retrieved from `getPathData()`) and point arrays
+  + split paths at length: creates 2 separate selfcontained path data according to split position
 * Version 1.3.1 fixes a rare parsing issue where 'M' commands were omitted (e.g `z` followed by another drawing command than `M` – unfortunately valid). See updated demo with "path-from-hell3" (... a pretty good stress test for any path data parser=). Thanks to [vboye-foreflight's PR](https://github.com/herrstrietzel/svg-getpointatlength/commit/ee035987b9ac7d5a8925190b59128206199779ae) we now get the point at last length whenever the input length exceeds the total length - compliant with native methods' behavior.
 * Version 1.3.0 **support for shapes** (ellipse, circle, rect etc.)
 * Version 1.2.4 fixed arc angle errors
@@ -315,8 +496,9 @@ See npm repo for all [existing versions](https://www.npmjs.com/package/svg-getpo
 Then we find the closest length in the length interval array. We interpolate a new `t` value based on the length difference to get a close length approximation
 
 
-### Path data input
-`getPathLengthLookup(d)` accepts stringified path data (as used in `d` attributes) or an already parsed path data array as well as an SVGGeometry element.  
+
+
+### Path parser   
 
 This library also includes a quite versatile parsing function that could be used separately.  
 
@@ -324,7 +506,6 @@ This library also includes a quite versatile parsing function that could be used
 As length calculations are based on normalized path data values.  
 All values are converted to absolute and longhand commands.  
 
-### Parsing options  
 
 ```
 let options= {
@@ -410,6 +591,10 @@ For debugging you may also test your path with this [**codepen testbed**](https:
 
 
 ## Demos
+
+You can easily test paths using the [web application](https://herrstrietzel.github.io/svg-getpointatlength): 
+
+
 * [get point, tangent and segment](https://codepen.io/herrstrietzel/pen/VYZXbwE)
 * [getPointAtlength: native vs. lookup](https://codepen.io/herrstrietzel/pen/KKEzdPd)
 * [get point at length – performance/accuracy](https://codepen.io/herrstrietzel/pen/WNWRroO)

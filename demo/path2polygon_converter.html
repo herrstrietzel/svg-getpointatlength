@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Path 2 polygon converter</title>
+
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <link rel="mask-icon" href="favicon.svg" color="#000000">
+    <meta name="theme-color" content="#ffffff">
+
+    <!-- 
+        <link rel="stylesheet" href="styles.css">
+
+    -->
+
+    <style>
+        code {
+            display: block;
+            max-width: 100%;
+            min-height: 6lh;
+            background: #eee;
+            margin-bottom: 0.5rem;
+            white-space: pre-wrap;
+            word-break: break-word;
+            overflow: auto;
+        }
+
+        body {
+            font-family: sans-serif;
+        }
+
+        svg {
+            width: 100%;
+            overflow: visible;
+            border: 1px solid #ccc;
+        }
+
+        .grd {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 2em;
+            height: 95vh;
+        }
+
+        @media (min-width: 1024px) {
+            .grd {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        .col {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+            justify-content: flex-start;
+        }
+
+        .col * {
+            margin-top: 0;
+            margin-bottom: 1rem;
+        }
+
+        select {
+            width: 100%;
+            display: block;
+        }
+
+        textarea {
+            width: 100%;
+            display: block;
+            min-height: 10em;
+            height: 50%;
+            flex: 1 1 auto;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            display: block;
+        }
+
+        #valLength {
+            display: block;
+        }
+
+        .clipped {
+            width: 100%;
+            aspect-ratio: 1;
+            background: red;
+        }
+
+        .resize {
+            border: 1px solid #ccc;
+            resize: both;
+            overflow: auto;
+        }
+
+        .clipped {
+            width: 100%;
+            aspect-ratio: 1;
+            background: red;
+        }
+
+        .resize {
+            border: 1px solid #ccc;
+            resize: both;
+            overflow: auto;
+        }
+
+        svg path {
+            stroke-width: 2%;
+            stroke: #ccc;
+        }
+
+        svg polygon {
+            stroke-width: 0.75%;
+            marker-start: url(#markerStart);
+            marker-mid: url(#markerRound);
+        }
+    </style>
+
+
+
+</head>
+
+<body>
+
+    <div class="grd">
+        <div class="col">
+            <h1>Path to polygon</h1>
+
+            <p>See github repository <a
+                    href="https://github.com/herrstrietzel/svg-getpointatlength">svg-getpointatlength</a></p>
+
+            <!-- samples -->
+            <h3>Load samples</h3>
+            <p>
+                <select id="inputExample" class="inputs">
+                </select>
+            </p>
+
+            <p><label>Vertices (<span id="currentVertices"></span>) </label><input class="inputs" id="inputVertices"
+                    type="number" value="16" min="4" max="2000" step="1">
+                <label>Decimals </label><input class="inputs" id="inputPrecision" type="number" value="1" min="0"
+                    max="10" step="1">
+
+            </p>
+
+            <h3>Adaptive poly</h3>
+            <p>Adjust number of vertices to split segements evenly and retain command final points. Improves visual
+                result
+                significantly.</p>
+
+            <p> <label><input id="inputAdaptive" class="inputs" type="checkbox" value="1" checked> Auto-adjust</label>
+            </p>
+
+            <p>If path is based on linetos – so in fact a polygon – just take the path data vertices </p>
+            <p><label><input id="inputRetainPoly" class="inputs" type="checkbox" value="1" checked> Retain polygon
+                </label>
+            </p>
+
+            <h3>Find close poly approximation </h3>
+            <label>Tolerance (length diff) <input type="number" class="inputs" id="inputTolerance" min="0" value="0"
+                    step="0.05">
+                <br><strong>Current length diff:</strong><span id="lengthDiff"></span></label>
+            <button class="btn-default btnApprox" type="button" id="btnAutoApprox">Auto-approximate</button>
+
+            <h3>Input you pathdata</h3>
+            <textarea class="--inputs" id="svgInput">
+            M10,10L20,25A1,3,0,0,0,50,50L90,90V80Z
+          </textarea>
+            <!-- 
+       M104 33.4c0 -12.9 -10.5 -23.4 -23.5 -23.4s-23.5 10.5 -23.5 23.4c0 -12.9 -10.5 -23.4 -23.5 -23.4s-23.5 10.5 -23.5 23.4c0 26.7 47 56.6 47 56.6s47 -29.9 47 -56.6z
+      -->
+
+            <h3>Output polygon points</h3>
+            <textarea id="svgOutput">
+      </textarea>
+            <h3>Output polygon path</h3>
+            <textarea id="svgOutputPolyPath">
+      </textarea>
+
+            <h3>CSS clip-path</h3>
+            <textarea id="cssClipOut">
+      </textarea>
+
+        </div>
+        <div class="col">
+            <svg id="svg" viewBox="0 0 100 100">
+                <path id="path" fill="none" stroke="black" d="" />
+                <polygon id="poly" points="" fill="none" stroke="red" />
+            </svg>
+
+            <div class="resize">
+                <div class="clipped" id="clipped"></div>
+            </div>
+
+        </div>
+
+        <!-- markers to show commands -->
+        <svg id="svgMarkers" style="width:0; height:0; position:absolute; z-index:-1;float:left;">
+            <defs>
+                <marker id="markerStart" overflow="visible" viewBox="0 0 10 10" refX="5" refY="5"
+                    markerUnits="strokeWidth" markerWidth="10" markerHeight="10" orient="auto-start-reverse">
+                    <circle cx="5" cy="5" r="5" fill="green"></circle>
+
+                    <marker id="markerRound" overflow="visible" viewBox="0 0 10 10" refX="5" refY="5"
+                        markerUnits="strokeWidth" markerWidth="10" markerHeight="10" orient="auto-start-reverse">
+                        <circle cx="5" cy="5" r="2.5" fill="red"></circle>
+                    </marker>
+            </defs>
+        </svg>
+
+        <!--
+      <script src="https://cdn.jsdelivr.net/npm/svg-getpointatlength@1.0.7/getPointAtLengthLookup.min.js"></script>
+      -->
+
+        <script <!-- <script
+            src="https://cdn.jsdelivr.net/gh/herrstrietzel/svg-getpointatlength@main/getPointAtLengthLookup_getPolygon.js"></script>
+        -->
+
+
+        <script>
+
+            function renderPolygon(poly, pts) {
+                let polyAtt = pts
+                    .map((pt) => {
+                        return `${pt.x} ${pt.y}`;
+                    })
+                    .join(" ");
+                poly.setAttribute("points", polyAtt);
+            }
+
+            function getPolyBBox(polyPoints) {
+                // calculate poly bounding box
+                let bb = {}
+                let minX = Infinity
+                let minY = Infinity
+                let maxX = -Infinity
+                let maxY = -Infinity
+                polyPoints.forEach(pt => {
+                    if (pt.x < minX) {
+                        minX = pt.x
+                    }
+                    if (pt.y < minY) {
+                        minY = pt.y
+                    }
+                    if (pt.x > maxX) {
+                        maxX = pt.x
+                    }
+                    if (pt.y > maxY) {
+                        maxY = pt.y
+                    }
+                })
+                bb.x = minX
+                bb.y = minY
+                bb.width = maxX - minX
+                bb.height = maxY - minY
+                return bb
+            }
+            /**
+             * simple performance test
+             */
+            function perfStart() {
+                t0 = performance.now();
+            }
+
+            function perfEnd(text = '') {
+                t1 = performance.now();
+                total = t1 - t0;
+                console.log(`excecution time ${text}:  ${total} ms`);
+                return total;
+            }
+            let samples = [
+
+                {
+                    'heart_linetos': ` M50 85.213l33.398 -27.819c9.92 -9.921 16.602 -17.881 16.602 -32.394c0 -13.723 -11.17 -24.894 -25 -24.894s-25 11.171 -25 24.894c0 -13.723 -11.17 -24.894 -25 -24.894s-25 11.171 -25 24.894c0 16.581 8.666 24.457 16.606 32.397 z`,
+                    res: ''
+                },
+                {
+                    'heart_short': ` M110,42.34c0-13.723-11.17-24.894-25-24.894c-9.694,0-18.082,5.489-22.231,13.498
+          c-0.89,1.717-1.584,3.55-2.055,5.47C60.248,38.314,60,40.299,60,42.34c0-13.723-11.17-24.894-25-24.894S10,28.617,10,42.34
+          c0,28.404,50,60.213,50,60.213S110,70.745,110,42.34`,
+                    res: ''
+                },
+
+                {
+                    'heart_poly': `M104 33.4 97.099 16.836 80.5 10 63.901 16.836 57 33.4 50.099 16.836 33.5 10 16.901 16.836 10 33.4 19.418 56.432 36.859 74.718 57 90 77.141 74.718 94.582 56.432z"`,
+                    res: ''
+                },
+                {
+                    'heart': `M104 33.4c0 -12.9 -10.5 -23.4 -23.5 -23.4s-23.5 10.5 -23.5 23.4c0 -12.9 -10.5 -23.4 -23.5 -23.4s-23.5 10.5 -23.5 23.4c0 26.7 47 56.6 47 56.6s47 -29.9 47 -56.6z`,
+                    res: ''
+                },
+                {
+                    'pacman': `M10000 0 
+          v10000 h10000                                      
+          a10000 10000 0 11-10000 -10000`,
+                    res: ''
+                }
+            ]
+
+            function cleanD(d) {
+                var regex = /[^mlcqazvhst\d.,\s-]/gi;
+                return d.replace(regex, '')
+            }
+        </script>
+
+        <script src="getPoly.js"></script>
+
+
+        <script type="module">
+
+            import { getPathLengthLookup, getPathDataFromEl, normalizePathInput, stringifyPathData } from '../dist/svg-getpointatlength.esm.js';
+
+
+
+
+            let svg, d, path, pathData;
+
+            /**
+             * load samples
+             */
+            for (let i = 0; i < samples.length; i++) {
+                let sample = samples[i]
+                let key = Object.keys(sample)[0];
+                let option = document.createElement("option");
+                option.value = sample[key];
+                option.innerHTML = key;
+                inputExample.append(option);
+            }
+            let first = inputExample.options[0];
+            first.selected = true;
+            svgInput.value = first.value;
+            inputExample.addEventListener("input", (e) => {
+                // get svg markup
+                let example = cleanD(inputExample.value);
+                svgInput.value = example;
+            });
+
+            //sanitize
+            svgInput.addEventListener("input", (e) => {
+                // get svg markup
+                //svgInput.value = cleanD(d);
+                updateAll()
+            });
+
+
+            path = document.querySelector('path')
+            svg = path.closest('svg')
+            d = cleanD(svgInput.value)
+            let polypoints = [];
+            let vertices = +inputVertices.value
+            let precision = +inputPrecision.value
+            let adaptive = inputAdaptive.checked
+            let retainPoly = inputRetainPoly.checked
+            let tolerance = +inputTolerance.value
+            //let isPolygon = pathIsPolygon(d)
+            //let pathDataPolyData = getPathDataPoly(pathData)
+            let inputs = document.querySelectorAll('.inputs')
+            inputs.forEach(inp => {
+                inp.addEventListener('input', e => {
+                    updateAll()
+                })
+            })
+            updateAll()
+
+            function updateAll() {
+                // update path
+                d = cleanD(svgInput.value)
+                retainPoly = inputRetainPoly.checked
+                vertices = +inputVertices.value
+                precision = +inputPrecision.value
+                adaptive = inputAdaptive.checked
+                retainPoly = inputRetainPoly.checked
+                pathData = normalizePathInput(d)
+                tolerance = +inputTolerance.value
+                /**
+                 * check if path is already a polygon
+                 */
+                let options = {
+                    vertices: vertices,
+                    decimals: precision,
+                    adaptive: adaptive,
+                    retainPoly: retainPoly,
+                    tolerance: tolerance
+                }
+
+
+                // let pathdata lookup
+                //let lookup = getPathLengthLookup(pathData)
+                //console.log(JSON.stringify(lookup, null, ' '))
+
+                //polypoints = polygonFromPathData(d, options)
+                polypoints = polygonFromPathData(pathData, options)
+                updatePolydata();
+                updateSVG()
+                currentVertices.textContent = polypoints.length
+
+
+                //CSS clip-path
+                let polyBB = getPolyBBox(polypoints)
+                let cssPoly = getCSSPoly(polypoints, polyBB, precision)
+            }
+
+            function getCSSPoly(polypoints, bb, decimals = 3) {
+                let {
+                    x,
+                    y,
+                    width,
+                    height
+                } = bb
+                let aspect = width / height
+                let cssPoly = []
+                polypoints.forEach(pt => {
+                    // scale and pan
+                    pt.x = (100 / width) * (pt.x - x);
+                    pt.y = ((100 / height) * (pt.y - y)) / aspect;
+                    cssPoly.push(`${+pt.x.toFixed(decimals)}% ${+pt.y.toFixed(decimals)}%`);
+                })
+                let clip = `polygon(${cssPoly.join(",")})`;
+                cssClipOut.value = clip
+                clipped.style.clipPath = clip;
+                return clip
+            }
+            /**
+             * find auto approximation
+             * according to length diff tolerance
+             */
+
+            btnAutoApprox.addEventListener('click', e => {
+                if (!tolerance) {
+                    inputTolerance.value = 0.2
+                }
+                updateAll()
+            })
+
+            function updatePolydata() {
+                let polyPointsAtt = polypoints.map(pt => {
+                    return [pt.x, pt.y].join(' ')
+                })
+                svgOutput.value = 'let points=' + JSON.stringify(polypoints)
+                svgOutputPolyPath.value = 'M' + polyPointsAtt.join(' ')
+                renderPolygon(poly, polypoints)
+            }
+
+            function updateSVG() {
+                d = cleanD(svgInput.value)
+                path.setAttribute('d', d)
+                // adjust viewBox
+                let vB = path.getBBox()
+                svg.setAttribute('viewBox', [vB.x, vB.y, vB.width, vB.height].join(' '))
+            }
+
+
+
+        </script>
+
+
+
+</body>
+
+</html>

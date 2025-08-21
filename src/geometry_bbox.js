@@ -1,8 +1,27 @@
 
 //import { splitSubpaths } from "./convert_segments";
-import { pointAtT, svgArcToCenterParam, getBezierExtremeT, getArcExtemes, getDistance, interpolate, getPointOnEllipse } from "./geometry";
+import { pointAtT, svgArcToCenterParam, getBezierExtremeT, getArcExtemes, getDistance, interpolate, getPointOnEllipse, reducePoints, getSquareDistance } from "./geometry";
 import { renderPoint } from "./visualize";
 //import {arcToBezier} from'./pathData_convert';
+
+
+/**
+ * check whether a polygon is likely 
+ * to be closed 
+ * or an open polyline 
+ */
+export function isClosedPolygon(pts, reduce = 24) {
+
+    let ptsR = reducePoints(pts, reduce);
+    let { width, height } = getPolyBBox(ptsR);
+    //let dimAvg = Math.max(width, height);
+    let dimAvg = (width + height) / 2;
+    //let closingThresh = (dimAvg / pts.length) ** 2
+    let closingThresh = (dimAvg) ** 2
+    let closingDist = getSquareDistance(pts[0], pts[pts.length - 1]);
+
+    return closingDist < closingThresh;
+}
 
 
 /**
@@ -110,30 +129,43 @@ export function getPathDataPoly(pathData) {
             // convert to cubic to get polygon
             case 'A':
 
-                let [, , xAxisRotation, largeArc, sweep, x1, y1] = com;
+                let [rx, ry, xAxisRotation, largeArc, sweep, x1, y1] = values
+                let isEllipse = rx!==ry;
+                //console.log('isEllipse', isEllipse);
 
-                if (typeof arcToBezier !== 'function') {
+                if(!isEllipse){
 
-                    // get real radii
-                    let rx = getDistance(p0, p) / 2;
-                    let ptMid = interpolate(p0, p, 0.5);
+                    let dx = p.x-p0.x;
+                    let dy = p.y-p0.y;
 
-                    let pt1 = getPointOnEllipse(ptMid.x, ptMid.y, rx, rx, 0)
-                    let pt2 = getPointOnEllipse(ptMid.x, ptMid.y, rx, rx, Math.PI)
-                    poly.push(pt1, pt2, p)
+                    let cx = p0.x + dx/2
+                    let cy = p0.y + dy/2
 
-                    //console.log('has no arc to cubic conversion');
-                    break;
+                    let horizontal = dy === 0;
+                    let vertical = dx === 0;
+                    let isSemiCircle = (horizontal && !vertical) || (!horizontal && vertical) ;
+
+                    //let isSemiCircle = horizontal || vertical;
+                    //console.log('!!isSemiCircle', isSemiCircle, horizontal, vertical, 'dx', dx, dy, 'r', rx, ry);
+    
+                    if(isSemiCircle){
+
+                        let r = horizontal ? dx*0.5 : dy*0.5;
+                        r = sweep ? r : -r;
+                        let c2 = horizontal ? {x:cx, y:cy-r} : {x:cx-r, y:cy}
+                        
+                        //renderPoint(svg, c)
+                        //renderPoint(markers, c2, 'magenta')
+                        poly.push(c2)
+                        //console.log('c2', p);
+                        //console.log('isSemiCircle', isSemiCircle, dx, dy, horizontal, vertical, 'r', r);
+                    }
+
                 }
-                let cubic = arcToBezier(p0, values)
-                cubic.forEach(com => {
-                    let vals = com.values
-                    let cp1 = { x: vals[0], y: vals[1] }
-                    let cp2 = { x: vals[2], y: vals[3] }
-                    let p = { x: vals[4], y: vals[5] }
-                    poly.push(cp1, cp2, p)
-                })
+
+                //console.log('pt', p, 'c2', p);
                 break;
+
 
             case 'C':
                 let cp2 = { x: values[2], y: values[3] }
@@ -150,6 +182,7 @@ export function getPathDataPoly(pathData) {
         }
     }
 
+    //console.log('poly', poly);
     return poly;
 }
 

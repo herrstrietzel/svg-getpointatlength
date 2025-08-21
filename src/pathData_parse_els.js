@@ -1,9 +1,9 @@
-import { pathDataToAbsoluteOrRelative, pathDataToLonghands, cubicToArc } from './pathData_convert.js';
-import { parse, parsePathDataNormalized } from './pathData_parse.js';
+//import { pathDataToAbsoluteOrRelative, pathDataToLonghands, cubicToArc } from './pathData_convert.js';
+import { parsePathDataString, parsePathDataNormalized, stringifyPathData } from './pathData_parse.js';
 
 
 // retrieve pathdata from svg geometry elements
-export function getPathDataFromEl(el) {
+export function getPathDataFromEl(el, stringify=false) {
 
     let pathData = [];
     let type = el.nodeName;
@@ -208,5 +208,6 @@ export function getPathDataFromEl(el) {
             break;
     }
 
-    return pathData;
+    return stringify ? stringifyPathData(pathData): pathData;
+
 };

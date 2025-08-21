@@ -1,10 +1,13 @@
 
-import { lgVals, deg2rad, rad2deg } from './constants.js';
+import { PI, PI2, lgVals, deg2rad, rad2deg, PI_half } from './constants.js';
+import { roundPoint } from './rounding.js';
+//import {getPolyBBox} from './geometry_bbox.js';
+
 
 
 export const {
     abs, acos, asin, atan, atan2, ceil, cos, exp, floor,
-    log, max, min, pow, random, round, sin, sqrt, tan, PI
+    log, max, min, pow, random, round, sin, sqrt, tan,
 } = Math;
 
 
@@ -15,6 +18,53 @@ export function getAngle(p1, p2, normalize = false) {
     // normalize negative angles
     if (normalize && angle < 0) angle += Math.PI * 2
     return angle
+}
+
+export function normalizeAngle(angle) {
+    let PI2 = Math.PI * 2;
+    // Normalize to 0-2π range
+    angle = angle % PI2;
+    return angle < 0 ? angle + PI2 : angle;
+}
+
+
+
+export function getAdjustedTangentAngle(rx, ry, angle, xAxisRotation = 0, sweep) {
+
+    let tangentAngle = getTangentAngle(rx, ry, angle);
+    let perpendicularAdjust = xAxisRotation ? Math.PI * 0.5 : 0;
+
+    /*
+    if (!xAxisRotation) {
+        perpendicularAdjust =0
+        console.log(xAxisRotation, 'perpendicularAdjust:', perpendicularAdjust);
+    }
+    */
+
+    let adjustXAxis = false;
+    if (xAxisRotation) {
+        adjustXAxis = (xAxisRotation > PI && sweep === 1) || (xAxisRotation <= PI && !sweep);
+        //adjustXAxis = (xAxisRotation > PI && sweep===1) || (!sweep);
+        console.log('???adjust', 'adjustXAxis', adjustXAxis, '1:', (xAxisRotation > PI && sweep === 1), '2:', (xAxisRotation <= PI && !sweep), xAxisRotation, xAxisRotation * rad2deg);
+
+        if (adjustXAxis) {
+            //perpendicularAdjust *= -1;
+        }
+
+        // Adjust for x-axis rotation first
+        tangentAngle -= xAxisRotation;
+
+    }
+    //console.log('perpendicularAdjust', perpendicularAdjust, xAxisRotation);
+
+    // Apply perpendicular adjustment
+    tangentAngle += perpendicularAdjust;
+
+    // Normalize angle to 0-2π range
+    tangentAngle = normalizeAngle(tangentAngle);
+
+    return tangentAngle;
+
 }
 
 
@@ -88,7 +138,7 @@ export function getDistance(p1, p2) {
         return Math.abs(p2.y - p1.y)
     }
 
-    return sqrt(
+    return Math.sqrt(
         (p2.x - p1.x) ** 2 + (p2.y - p1.y) ** 2
     );
 }
@@ -116,7 +166,7 @@ export function interpolate(p1, p2, t, getTangent = false) {
         pt.angle = getAngle(p1, p2)
 
         // normalize negative angles
-        if (pt.angle < 0) pt.angle += PI * 2
+        if (pt.angle < 0) pt.angle += Math.PI * 2
     }
 
     return pt
@@ -269,7 +319,7 @@ export function pointAtT(pts, t = 0.5, getTangent = false, getCpts = false) {
     }
 
     // normalize negative angles
-    if (getTangent && pt.angle < 0) pt.angle += PI * 2
+    if (getTangent && pt.angle < 0) pt.angle += Math.PI * 2
 
     return pt
 }
@@ -390,7 +440,7 @@ export function pointAtT(pts, t = 0.5, getTangent = false, getCpts = false) {
 /**
  * get vertices from path command final on-path points
  */
-export function getPathDataVertices(pathData) {
+export function getPathDataVertices(pathData, decimals = -1) {
     let polyPoints = [];
     let p0 = { x: pathData[0].values[0], y: pathData[0].values[1] };
 
@@ -400,6 +450,8 @@ export function getPathDataVertices(pathData) {
         if (values.length) {
             let pt = values.length > 1 ? { x: values[values.length - 2], y: values[values.length - 1] }
                 : (type === 'V' ? { x: p0.x, y: values[0] } : { x: values[0], y: p0.y });
+
+            if (decimals > -1) pt = roundPoint(pt);
             polyPoints.push(pt);
             p0 = pt;
         }
@@ -409,20 +461,24 @@ export function getPathDataVertices(pathData) {
 
 
 
-/**
- *  based on @cuixiping;
- *  https://stackoverflow.com/questions/9017100/calculate-center-of-svg-arc/12329083#12329083
- */
-export function svgArcToCenterParam(x1, y1, rx, ry, xAxisRotation, largeArc, sweep, x2, y2) {
+
+
+export function svgArcToCenterParam(x1, y1, rx, ry, xAxisRotation, largeArc, sweep, x2, y2, normalize = true
+) {
 
     // helper for angle calculation
-    const getAngle = (cx, cy, x, y) => {
-        return atan2(y - cy, x - cx);
+    const getAngle = (cx, cy, x, y, normalize = true) => {
+        let angle = Math.atan2(y - cy, x - cx);
+        if (normalize && angle < 0) angle += Math.PI * 2
+        return angle
     };
 
     // make sure rx, ry are positive
-    rx = abs(rx);
-    ry = abs(ry);
+    rx = Math.abs(rx);
+    ry = Math.abs(ry);
+
+    // normalize xAxis rotation
+    xAxisRotation = rx === ry ? 0 : (xAxisRotation < 0 && normalize ? xAxisRotation + 360 : xAxisRotation);
 
 
     // create data object
@@ -448,61 +504,16 @@ export function svgArcToCenterParam(x1, y1, rx, ry, xAxisRotation, largeArc, swe
         throw Error("rx and ry can not be 0");
     }
 
-    let shortcut = true
-    //console.log('short');
-
-    if (rx === ry && shortcut) {
-
-        // test semicircles
-        let diffX = Math.abs(x2 - x1)
-        let diffY = Math.abs(y2 - y1)
-        let r = diffX;
-
-        let xMin = Math.min(x1, x2),
-            yMin = Math.min(y1, y2),
-            PIHalf = Math.PI * 0.5
-
-
-        // semi circles
-        if (diffX === 0 && diffY || diffY === 0 && diffX) {
-            //console.log('semi');
-
-            r = diffX === 0 && diffY ? diffY / 2 : diffX / 2;
-            arcData.rx = r
-            arcData.ry = r
-
-            // verical
-            if (diffX === 0 && diffY) {
-                arcData.cx = x1;
-                arcData.cy = yMin + diffY / 2;
-                arcData.startAngle = y1 > y2 ? PIHalf : -PIHalf
-                arcData.endAngle = y1 > y2 ? -PIHalf : PIHalf
-                arcData.deltaAngle = sweep ? Math.PI : -Math.PI
-
-            }
-            // horizontal
-            else if (diffY === 0 && diffX) {
-                arcData.cx = xMin + diffX / 2;
-                arcData.cy = y1
-                arcData.startAngle = x1 > x2 ? Math.PI : 0
-                arcData.endAngle = x1 > x2 ? -Math.PI : Math.PI
-                arcData.deltaAngle = sweep ? Math.PI : -Math.PI
-            }
-
-            //console.log(arcData);
-            return arcData;
-        }
-    }
 
     /**
      * if rx===ry x-axis rotation is ignored
      * otherwise convert degrees to radians
      */
-    let phi = rx === ry ? 0 : (xAxisRotation * PI) / 180;
+    let phi = rx === ry ? 0 : xAxisRotation * deg2rad;
     let cx, cy
 
-    let s_phi = !phi ? 0 : sin(phi);
-    let c_phi = !phi ? 1 : cos(phi);
+    let s_phi = !phi ? 0 : Math.sin(phi);
+    let c_phi = !phi ? 1 : Math.cos(phi);
 
     let hd_x = (x1 - x2) / 2;
     let hd_y = (y1 - y2) / 2;
@@ -517,8 +528,9 @@ export function svgArcToCenterParam(x1, y1, rx, ry, xAxisRotation, largeArc, swe
     //   Step 3: Ensure radii are large enough
     let lambda = (x1_ * x1_) / (rx * rx) + (y1_ * y1_) / (ry * ry);
     if (lambda > 1) {
-        rx = rx * sqrt(lambda);
-        ry = ry * sqrt(lambda);
+        let lambdaRoot = Math.sqrt(lambda);
+        rx = rx * lambdaRoot;
+        ry = ry * lambdaRoot;
 
         // save real rx/ry
         arcData.rx = rx;
@@ -533,8 +545,8 @@ export function svgArcToCenterParam(x1, y1, rx, ry, xAxisRotation, largeArc, swe
         //console.log('error:', rx, ry, rxy1_, ryx1_);
         throw Error("start point can not be same as end point");
     }
-    let coe = sqrt(abs((rxry * rxry - sum_of_sq) / sum_of_sq));
-    if (largeArc == sweep) {
+    let coe = Math.sqrt(Math.abs((rxry * rxry - sum_of_sq) / sum_of_sq));
+    if (largeArc === sweep) {
         coe = -coe;
     }
 
@@ -554,24 +566,33 @@ export function svgArcToCenterParam(x1, y1, rx, ry, xAxisRotation, largeArc, swe
      * calculate angles between center point and
      * commands starting and final on path point
      */
-    let startAngle = getAngle(cx, cy, x1, y1);
-    let endAngle = getAngle(cx, cy, x2, y2);
+    let startAngle = getAngle(cx, cy, x1, y1, normalize);
+    let endAngle = getAngle(cx, cy, x2, y2, normalize);
 
     // adjust end angle
-    if (!sweep && endAngle > startAngle) {
-        //console.log('adj neg');
-        endAngle -= Math.PI * 2
+
+    // Adjust angles based on sweep direction
+    if (sweep) {
+        // Clockwise
+        if (endAngle < startAngle) {
+            endAngle += Math.PI * 2;
+        }
+    } else {
+        // Counterclockwise
+        if (endAngle > startAngle) {
+            endAngle -= Math.PI * 2;
+        }
     }
 
-    if (sweep && startAngle > endAngle) {
-        //console.log('adj pos');
-        endAngle = endAngle <= 0 ? endAngle + Math.PI * 2 : endAngle
-    }
+    let deltaAngle = endAngle - startAngle;
 
-    let deltaAngle = endAngle - startAngle
+    // The rest of your code remains the same
     arcData.startAngle = startAngle;
+    arcData.startAngle_deg = startAngle * rad2deg;
     arcData.endAngle = endAngle;
+    arcData.endAngle_deg = endAngle * rad2deg;
     arcData.deltaAngle = deltaAngle;
+    arcData.deltaAngle_deg = deltaAngle * rad2deg;
 
     //console.log('arc', arcData);
     return arcData;
@@ -634,38 +655,70 @@ export function sortPolygonLeftTopFirst(pts) {
 }
 
 
+
+
+
+
+/**
+ * reduce polypoints
+ * for sloppy dimension approximations
+ */
+export function reducePoints(points, maxPoints = 48) {
+    if (!Array.isArray(points) || points.length <= maxPoints) return points;
+
+    // Calculate how many points to skip between kept points
+    let len = points.length;
+    let step = len / maxPoints;
+    let reduced = [points[0]];
+
+    for (let i = 0; i < maxPoints; i++) {
+        reduced.push(points[Math.floor(i * step)]);
+    }
+
+    let lenR = reduced.length;
+    // Always include the last point to maintain path integrity
+    if (reduced[lenR - 1] !== points[len - 1]) {
+        reduced[lenR - 1] = points[len - 1];
+    }
+
+    return reduced;
+}
+
+
+
 export function getPointOnEllipse(cx, cy, rx, ry, angle, ellipseRotation = 0, parametricAngle = true, degrees = false) {
 
 
     //console.log(cx, cy, rx, ry, angle, ellipseRotation, parametricAngle);
 
     // Convert degrees to radians
-    angle = degrees ? (angle * PI) / 180 : angle;
-    ellipseRotation = degrees ? (ellipseRotation * PI) / 180 : ellipseRotation;
+    angle = degrees ? angle * deg2rad : angle;
+    ellipseRotation = degrees ? ellipseRotation * deg2rad : ellipseRotation;
     // reset rotation for circles or 360 degree 
-    ellipseRotation = rx !== ry ? (ellipseRotation !== PI * 2 ? ellipseRotation : 0) : 0;
+    ellipseRotation = rx !== ry ? (ellipseRotation !== Math.PI * 2 ? ellipseRotation : 0) : 0;
 
     // is ellipse
     if (parametricAngle && rx !== ry) {
         // adjust angle for ellipse rotation
         angle = ellipseRotation ? angle - ellipseRotation : angle;
         // Get the parametric angle for the ellipse
-        let angleParametric = atan(tan(angle) * (rx / ry));
+        //let angleParametric = Math.atan(Math.tan(angle) * (rx / ry));
+        let angleParametric = toParametricAngle(angle);
         // Ensure the parametric angle is in the correct quadrant
-        angle = cos(angle) < 0 ? angleParametric + PI : angleParametric;
+        angle = Math.cos(angle) < 0 ? angleParametric + Math.PI : angleParametric;
     }
 
     // Calculate the point on the ellipse without rotation
-    let x = cx + rx * cos(angle),
-        y = cy + ry * sin(angle);
+    let x = cx + rx * Math.cos(angle),
+        y = cy + ry * Math.sin(angle);
     let pt = {
         x: x,
         y: y
     }
 
     if (ellipseRotation) {
-        pt.x = cx + (x - cx) * cos(ellipseRotation) - (y - cy) * sin(ellipseRotation)
-        pt.y = cy + (x - cx) * sin(ellipseRotation) + (y - cy) * cos(ellipseRotation)
+        pt.x = cx + (x - cx) * Math.cos(ellipseRotation) - (y - cy) * Math.sin(ellipseRotation)
+        pt.y = cy + (x - cx) * Math.sin(ellipseRotation) + (y - cy) * Math.cos(ellipseRotation)
     }
     return pt
 }
@@ -674,11 +727,11 @@ export function getPointOnEllipse(cx, cy, rx, ry, angle, ellipseRotation = 0, pa
 // to parametric angle helper
 export function toParametricAngle(angle, rx, ry) {
 
-    if (rx === ry || (angle % PI * 0.5 === 0)) return angle;
-    let angleP = atan(tan(angle) * (rx / ry));
+    if (rx === ry || (angle % Math.PI * 0.5 === 0)) return angle;
+    let angleP = Math.atan(Math.tan(angle) * (rx / ry));
 
     // Ensure the parametric angle is in the correct quadrant
-    angleP = cos(angle) < 0 ? angleP + PI : angleP;
+    angleP = Math.cos(angle) < 0 ? angleP + Math.PI : angleP;
 
     return angleP
 }
@@ -686,11 +739,11 @@ export function toParametricAngle(angle, rx, ry) {
 // From parametric angle to non-parametric angle
 export function toNonParametricAngle(angleP, rx, ry) {
 
-    if (rx === ry || (angleP % PI * 0.5 === 0)) return angleP;
+    if (rx === ry || (angleP % Math.PI * 0.5 === 0)) return angleP;
 
     let angle = atan(tan(angleP) * (ry / rx));
     // Ensure the non-parametric angle is in the correct quadrant
-    return cos(angleP) < 0 ? angle + PI : angle;
+    return Math.cos(angleP) < 0 ? angle + Math.PI : angle;
 };
 
 
@@ -701,12 +754,74 @@ export function toNonParametricAngle(angleP, rx, ry) {
 export function getTangentAngle(rx, ry, parametricAngle) {
 
     // Derivative components
-    let dx = -rx * sin(parametricAngle);
-    let dy = ry * cos(parametricAngle);
-    let tangentAngle = atan2(dy, dx);
+    let dx = -rx * Math.sin(parametricAngle);
+    let dy = ry * Math.cos(parametricAngle);
+    let tangentAngle = Math.atan2(dy, dx);
 
     return tangentAngle;
 }
+
+
+
+/**
+ * get bezier extremes
+ */
+
+export function getBezierExtremes(cpts = []) {
+
+    let extremes = [];
+
+    // check if extremes are plausible at all
+    let hasExtremes = checkBezierExtremes(cpts);
+    //console.log('hasExtremes', hasExtremes);
+    if (!hasExtremes) return extremes;
+
+    let tArr = getBezierExtremeT(cpts)
+    tArr.forEach(t => {
+        let pt = pointAtT(cpts, t)
+        extremes.push(pt)
+    })
+
+    return extremes;
+}
+
+/**
+ * if control points are within
+ * bounding box of start and end point
+ * we cant't have extremes
+ */
+export function checkBezierExtremes(cpts = []) {
+
+    let len = cpts.length;
+    let isCubic = len === 4;
+    let p0 = cpts[0];
+    let cp1 = cpts[1]
+    let cp2 = isCubic ? cpts[2] : cp1;
+    let p = isCubic ? cpts[3] : cpts[2];
+
+    let y = Math.min(p0.y, p.y);
+    let x = Math.min(p0.x, p.x);
+    let right = Math.max(p0.x, p.x);
+    let bottom = Math.max(p0.y, p.y);
+    let hasExtremes = false;
+
+    if (
+        cp1.y < y ||
+        cp1.y > bottom ||
+        cp2.y < y ||
+        cp2.y > bottom ||
+        cp1.x < x ||
+        cp1.x > right ||
+        cp2.x < x ||
+        cp2.x > right
+    ) {
+        hasExtremes = true
+    }
+
+    return hasExtremes;
+}
+
+
 
 export function bezierhasExtreme(p0, cpts = [], angleThreshold = 0.05) {
     let isCubic = cpts.length === 3 ? true : false;
@@ -737,6 +852,204 @@ export function getBezierExtremeT(pts) {
     return tArr;
 }
 
+/**
+ * based on Nikos M.'s answer
+ * how-do-you-calculate-the-axis-aligned-bounding-box-of-an-ellipse
+ * https://stackoverflow.com/questions/87734/#75031511
+ * See also: https://github.com/foo123/Geometrize
+ */
+
+export function getArcExtemes_fromParametrized(p0, p, arcParams = {}) {
+
+    // all angles are already in radians
+    // start and end angles are parametrized
+    let { rx, ry, cx, cy, xAxisRotation, startAngle, endAngle, deltaAngle, sweep, deltaAngle_param } = arcParams;
+
+    // collect extreme points – add end point
+    let extremes = [];
+
+
+    /**
+     * if circular - take shortcut
+     */
+    let useShortcut = true
+
+    if (useShortcut && rx === ry) {
+
+        // check if delta is right angle
+        let startAngle_right = Math.abs(startAngle % PI_half) === 0;
+        let endAngle_right = startAngle_right ? Math.abs(endAngle % PI_half) === 0 : false;
+        //console.log('is circular', startAngle_right, endAngle_right);
+
+        if (startAngle_right && endAngle_right) {
+
+            let isQuarterCircle = Math.abs(deltaAngle % PI_half) === 0;
+            let isSemiCircle = isQuarterCircle ? Math.abs(deltaAngle % PI) === 0 : false;
+            //let is3Quarters = isQuarterCircle && !isSemiCircle && Math.abs(deltaAngle) === PI_half * 3 ? true : false;
+
+            //console.log('isQuarterCircle', isQuarterCircle, isSemiCircle);
+
+            if (isSemiCircle) {
+                let isVertical = p0.x === p.x;
+                let isHorizontal = p0.y === p.y;
+
+                let r = sweep ? rx : -rx;
+                //console.log(isHorizontal, isVertical);
+
+                if (isHorizontal) {
+                    let ltr = p0.x < p.x;
+                    r = ltr ? -r : r;
+                    extremes = [{ x: cx, y: cy + r }]
+                    // console.log('isHorizontal', extremes, ltr);
+                }
+                if (isVertical) {
+                    let ttb = p0.y < p.y;
+                    r = ttb ? r : -r;
+                    extremes = [{ x: cx + r, y: cy }];
+                    // console.log('isVertical', ttb);
+                }
+
+                return extremes;
+            }
+
+            /*
+            else if(is3Quarters){
+
+                let ptSet = new Set([`${p0.x}_${p0.y}`, `${p.x}_${p.y}`]);
+
+                // top, bottom, right, left
+                let ptT = {x:cx, y: cy-ry}
+                let ptB = {x:cx, y: cy+ry}
+                let ptR = {x:cx+rx, y: cy}
+                let ptL = {x:cx-rx, y: cy}
+
+                let ext = [ptT,ptB, ptR, ptL];
+                ext.forEach(pt=>{
+                    let ptStr = `${pt.x}_${pt.y}`
+                    if(!ptSet.has(ptStr)){
+                        extremes.push(pt)
+                    }
+                })
+                return extremes;
+            }
+            */
+
+        }
+
+    }
+
+    //console.log('!!!calc');
+
+    // adjust to parametrized delta
+    deltaAngle = endAngle - startAngle;
+    //deltaAngle = deltaAngle_param;
+
+    //console.log('deltaAngle', deltaAngle);
+
+
+    // compute point on ellipse from angle around ellipse (theta)
+    const arc = (theta, cx, cy, rx, ry, alpha) => {
+
+        // theta is angle in radians around arc
+        // alpha is angle of rotation of ellipse in radians
+        let cosA = alpha ? Math.cos(alpha) : 1;
+        let sinA = alpha ? Math.sin(alpha) : 0;
+
+        let x = rx * Math.cos(theta),
+            y = ry * Math.sin(theta);
+
+        return {
+            x: cx + cosA * x - sinA * y,
+            y: cy + sinA * x + cosA * y
+        };
+    }
+
+
+    let tanA = Math.tan(xAxisRotation),
+        p1, p2, p3, p4, theta;
+
+    /**
+    * find min/max from zeroes of directional derivative along x and y
+    * along x axis
+    */
+    theta = Math.atan2(-ry * tanA, rx);
+
+    let angle1 = theta;
+    let angle2 = theta + Math.PI;
+    let angle3 = Math.atan2(ry, rx * tanA);
+    let angle4 = angle3 + Math.PI;
+
+
+    // inner bounding box
+    let xArr = [p0.x, p.x]
+    let yArr = [p0.y, p.y]
+    let xMin = Math.min(...xArr)
+    let xMax = Math.max(...xArr)
+    let yMin = Math.min(...yArr)
+    let yMax = Math.max(...yArr)
+
+
+    // on path point close after start
+    let angleAfterStart = (endAngle) - deltaAngle * 0.999
+    //angleAfterStart = 0
+
+    //angleAfterStart = normalizeAngle(angleAfterStart)
+    //let pP2 = arc(angleAfterStart, cx, cy, rx, ry, xAxisRotation);
+    let pP2 = arc(angleAfterStart, cx, cy, rx, ry, xAxisRotation);
+
+
+    // on path point close before end
+    let angleBeforeEnd = endAngle - deltaAngle * 0.001
+
+    let pP3 = arc(angleBeforeEnd, cx, cy, rx, ry, xAxisRotation);
+
+    // renderPoint(svg, pP2, 'blue', '5%')
+    // renderPoint(svg, pP3, 'orange')
+
+
+    /**
+     * expected extremes
+     * if leaving inner bounding box
+     * (between segment start and end point)
+     * otherwise exclude elliptic extreme points
+    */
+
+    // right
+    if (pP2.x > xMax || pP3.x > xMax) {
+        // get point for this theta
+        p1 = arc(angle1, cx, cy, rx, ry, xAxisRotation);
+        extremes.push(p1)
+    }
+
+    // left
+    if (pP2.x < xMin || pP3.x < xMin) {
+        // get anti-symmetric point
+        p2 = arc(angle2, cx, cy, rx, ry, xAxisRotation);
+        extremes.push(p2)
+    }
+
+    // top
+    if (pP2.y < yMin || pP3.y < yMin) {
+        // get anti-symmetric point
+        p4 = arc(angle4, cx, cy, rx, ry, xAxisRotation);
+        extremes.push(p4)
+    }
+
+    // bottom
+    if (pP2.y > yMax || pP3.y > yMax) {
+        // get point for this theta
+        p3 = arc(angle3, cx, cy, rx, ry, xAxisRotation);
+        extremes.push(p3)
+
+    }
+
+    //extremes.push(p)
+
+
+    return extremes;
+}
+
+
 
 /**
  * based on Nikos M.'s answer
@@ -745,6 +1058,115 @@ export function getBezierExtremeT(pts) {
  * See also: https://github.com/foo123/Geometrize
  */
 export function getArcExtemes(p0, values) {
+
+    /**
+        * based on @cuixiping;
+        * https://stackoverflow.com/questions/9017100/calculate-center-of-svg-arc/12329083#12329083
+        */
+    function svgArcToCenterParam2(x1, y1, rx, ry, degree, fA, fS, x2, y2) {
+        const radian = (ux, uy, vx, vy) => {
+            let dot = ux * vx + uy * vy;
+            let mod = Math.sqrt((ux * ux + uy * uy) * (vx * vx + vy * vy));
+            let rad = Math.acos(dot / mod);
+            if (ux * vy - uy * vx < 0) {
+                rad = -rad;
+            }
+            return rad;
+        };
+        // degree to radian
+        let phi = (degree * Math.PI) / 180;
+        let cx, cy, startAngle, deltaAngle, endAngle;
+        let PI = Math.PI;
+        let PIx2 = PI * 2;
+        if (rx < 0) {
+            rx = -rx;
+        }
+        if (ry < 0) {
+            ry = -ry;
+        }
+        if (rx == 0 || ry == 0) {
+            // invalid arguments
+            throw Error("rx and ry can not be 0");
+        }
+        let s_phi = Math.sin(phi);
+        let c_phi = Math.cos(phi);
+        let hd_x = (x1 - x2) / 2; // half diff of x
+        let hd_y = (y1 - y2) / 2; // half diff of y
+        let hs_x = (x1 + x2) / 2; // half sum of x
+        let hs_y = (y1 + y2) / 2; // half sum of y
+        // F6.5.1
+        let x1_ = c_phi * hd_x + s_phi * hd_y;
+        let y1_ = c_phi * hd_y - s_phi * hd_x;
+        // F.6.6 Correction of out-of-range radii
+        //   Step 3: Ensure radii are large enough
+        let lambda = (x1_ * x1_) / (rx * rx) + (y1_ * y1_) / (ry * ry);
+        if (lambda > 1) {
+            rx = rx * Math.sqrt(lambda);
+            ry = ry * Math.sqrt(lambda);
+        }
+        let rxry = rx * ry;
+        let rxy1_ = rx * y1_;
+        let ryx1_ = ry * x1_;
+        let sum_of_sq = rxy1_ * rxy1_ + ryx1_ * ryx1_; // sum of square
+        if (!sum_of_sq) {
+            throw Error("start point can not be same as end point");
+        }
+        let coe = Math.sqrt(Math.abs((rxry * rxry - sum_of_sq) / sum_of_sq));
+        if (fA == fS) {
+            coe = -coe;
+        }
+        // F6.5.2
+        let cx_ = (coe * rxy1_) / ry;
+        let cy_ = (-coe * ryx1_) / rx;
+        // F6.5.3
+        cx = c_phi * cx_ - s_phi * cy_ + hs_x;
+        cy = s_phi * cx_ + c_phi * cy_ + hs_y;
+        let xcr1 = (x1_ - cx_) / rx;
+        let xcr2 = (x1_ + cx_) / rx;
+        let ycr1 = (y1_ - cy_) / ry;
+        let ycr2 = (y1_ + cy_) / ry;
+        // F6.5.5
+        startAngle = radian(1, 0, xcr1, ycr1);
+        // F6.5.6
+        deltaAngle = radian(xcr1, ycr1, -xcr2, -ycr2);
+        if (deltaAngle > PIx2) {
+            deltaAngle -= PIx2;
+        }
+        else if (deltaAngle < 0) {
+            deltaAngle += PIx2;
+        }
+        if (fS == false || fS == 0) {
+            deltaAngle -= PIx2;
+        }
+        endAngle = startAngle + deltaAngle;
+        if (endAngle > PIx2) {
+            endAngle -= PIx2;
+        }
+        else if (endAngle < 0) {
+            endAngle += PIx2;
+        }
+        let toDegFactor = 180 / PI;
+        let outputObj = {
+            pt: {
+                x: cx,
+                y: cy
+            },
+            rx: rx,
+            ry: ry,
+            startAngle_deg: startAngle * toDegFactor,
+            startAngle: startAngle,
+            deltaAngle_deg: deltaAngle * toDegFactor,
+            deltaAngle: deltaAngle,
+            endAngle_deg: endAngle * toDegFactor,
+            endAngle: endAngle,
+            clockwise: fS == true || fS == 1
+        };
+        return outputObj;
+    }
+
+
+
+
     // compute point on ellipse from angle around ellipse (theta)
     const arc = (theta, cx, cy, rx, ry, alpha) => {
         // theta is angle in radians around arc
@@ -761,14 +1183,45 @@ export function getArcExtemes(p0, values) {
     }
 
     //parametrize arcto data
-    let arcData = svgArcToCenterParam(p0.x, p0.y, values[0], values[1], values[2], values[3], values[4], values[5], values[6]);
-    let { rx, ry, cx, cy, endAngle, deltaAngle } = arcData;
+
+    let normalize = false;
+    let arcData2 = svgArcToCenterParam(p0.x, p0.y, values[0], values[1], values[2], values[3], values[4], values[5], values[6], normalize);
+
+
+    let arcData = svgArcToCenterParam2(p0.x, p0.y, values[0], values[1], values[2], values[3], values[4], values[5], values[6]);
+    let { rx, ry, pt, startAngle, endAngle, deltaAngle } = arcData;
+
+    console.log('arcData', JSON.stringify(arcData, null, ' '));
+    console.log('arcData2', JSON.stringify(arcData2, null, ' '));
 
     // arc rotation
     let deg = values[2];
 
     // final on path point
     let p = { x: values[5], y: values[6] }
+
+    // circle/elipse center coordinates
+    let [cx, cy] = [pt.x, pt.y];
+
+
+    let startAngle2 = arcData2.startAngle
+    let endAngle2 = arcData2.endAngle
+
+
+    startAngle2 = toParametricAngle(arcData2.startAngle, rx, ry);
+    endAngle2 = toParametricAngle(arcData2.endAngle, rx, ry);
+    let deltaAngle2 = endAngle2 - startAngle2;
+
+    console.log(startAngle, endAngle, 'startAngle2', arcData2.startAngle, startAngle2, endAngle2);
+
+    /*
+    startAngle = toNonParametricAngle(startAngle);
+    endAngle = toNonParametricAngle(endAngle);
+    deltaAngle = endAngle - startAngle;
+    */
+
+
+
 
     // collect extreme points – add end point
     let extremes = [p]
@@ -801,11 +1254,33 @@ export function getArcExtemes(p0, values) {
 
     // on path point close after start
     let angleAfterStart = endAngle - deltaAngle * 0.001
+    //angleAfterStart = endAngle2 - deltaAngle * 0.001
+    //angleAfterStart = endAngle2
+
+
+
+    //angleAfterStart = normalizeAngle(angleAfterStart)
     let pP2 = arc(angleAfterStart, cx, cy, rx, ry, alpha);
+
+
+    let a0 = endAngle2 - deltaAngle
+    a0 = 0 * deg2rad
+    a0 = startAngle2;
+    a0 = endAngle;
+    //alpha = 0
+    let pX = getPointOnEllipse(cx, cy, rx, ry, a0, alpha, false)
+
+    console.log('pP2', pP2, angleAfterStart, cx, cy, rx, ry, alpha, alpha * rad2deg);
+    renderPoint(svg, pX, 'purple')
+    renderPoint(svg, { x: cx, y: cy }, 'green')
 
     // on path point close before end
     let angleBeforeEnd = endAngle - deltaAngle * 0.999
+    //angleBeforeEnd = endAngle 
+    //angleBeforeEnd = normalizeAngle(angleBeforeEnd)
+
     let pP3 = arc(angleBeforeEnd, cx, cy, rx, ry, alpha);
+    //renderPoint(svg, pP3, 'cyan')
 
 
     /**
@@ -1210,7 +1685,7 @@ export function checkFlatnessByPolygonArea(points, tolerance = 0.001) {
         let subY = points[i].y;
         area += addX * addY * 0.5 - subX * subY * 0.5;
     }
-    return abs(area) < tolerance;
+    return Math.abs(area) < tolerance;
 }
 
 // LG weight/abscissae generator
@@ -1261,51 +1736,29 @@ export function getLegendreGaussValues(n, x1 = -1, x2 = 1) {
  * by Legendre-Gauss
  */
 
-export function getEllipseLengthLG(rx, ry, startAngle, endAngle, xAxisRotation = 0, convertParametric = true, degrees = false, wa = []) {
-
-    // convert to radians
-    if (degrees) {
-        startAngle = (startAngle * PI) / 180;
-        endAngle = (endAngle * PI) / 180;
-        xAxisRotation = xAxisRotation * PI / 180
-    }
-
-    // adjust for axis rotation
-    if (xAxisRotation && !convertParametric) {
-        startAngle = toParametricAngle(toNonParametricAngle(startAngle, rx, ry) - xAxisRotation, rx, ry)
-        endAngle = toParametricAngle(toNonParametricAngle(endAngle, rx, ry) - xAxisRotation, rx, ry);
-    }
-
-    else if (xAxisRotation && convertParametric) {
-        startAngle -= xAxisRotation
-        endAngle -= xAxisRotation
-    }
-
-    // convert parametric angles
-    if (convertParametric) {
-        startAngle = toParametricAngle(startAngle, rx, ry)
-        endAngle = toParametricAngle(endAngle, rx, ry)
-    }
-
+export function getEllipseLengthLG(rx, ry, startAngle, endAngle, wa = []) {
 
     // Transform [-1, 1] interval to [startAngle, endAngle]
     let halfInterval = (endAngle - startAngle) * 0.5;
     let midpoint = (endAngle + startAngle) * 0.5;
-
 
     // Arc length integral approximation
     let arcLength = 0;
     for (let i = 0; i < wa.length; i++) {
         let [weight, abscissae] = wa[i];
         let theta = midpoint + halfInterval * abscissae;
-        let integrand = sqrt(
-            pow(rx * sin(theta), 2) + pow(ry * cos(theta), 2)
+        let integrand = Math.sqrt(
+            Math.pow(rx * Math.sin(theta), 2) + Math.pow(ry * Math.cos(theta), 2)
         );
         arcLength += weight * (integrand);
     }
 
-    return abs(halfInterval * arcLength)
+    return Math.abs(halfInterval * arcLength)
 }
+
+
+
+
 
 
 
@@ -1382,7 +1835,7 @@ export function getLength(pts, t = 1, lg = 0) {
      */
 
 
-    const cubicBezierLength = (p0, cp1, cp2, p, t, lg) => {
+    const cubicBezierLength = (p0, cp1, cp2, p, t = 0, lg) => {
         if (t === 0) {
             return 0;
         }
@@ -1459,11 +1912,11 @@ export function getLength(pts, t = 1, lg = 0) {
             k = ct - bt ** 2;
 
         return (
-            (sqrt(a) / 2) *
-            (ut * sqrt(ut ** 2 + k) -
-                bt * sqrt(bt ** 2 + k) +
+            (Math.sqrt(a) / 2) *
+            (ut * Math.sqrt(ut ** 2 + k) -
+                bt * Math.sqrt(bt ** 2 + k) +
                 k *
-                log((ut + sqrt(ut ** 2 + k)) / (bt + sqrt(bt ** 2 + k))))
+                Math.log((ut + Math.sqrt(ut ** 2 + k)) / (bt + Math.sqrt(bt ** 2 + k))))
         );
     }
 
@@ -1471,6 +1924,7 @@ export function getLength(pts, t = 1, lg = 0) {
     let length
     if (pts.length === 4) {
         length = cubicBezierLength(pts[0], pts[1], pts[2], pts[3], t, lg)
+
     }
     else if (pts.length === 3) {
         length = quadraticBezierLength(pts[0], pts[1], pts[2], t)
@@ -1481,3 +1935,13 @@ export function getLength(pts, t = 1, lg = 0) {
 
     return length;
 }
+
+
+
+
+
+
+
+
+
+

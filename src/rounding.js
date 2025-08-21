@@ -98,3 +98,16 @@ export function roundPathData(pathData, decimals = -1) {
     };
     return pathData;
 }
+
+
+export function roundPoint(pt={}, decimals=3){
+    return {x:+pt.x.toFixed(decimals), y:+pt.y.toFixed(decimals)}
+}
+
+export function roundPoints(pts=[], decimals=3){
+
+    pts.forEach((pt,i)=>{
+        pts[i] = roundPoint(pt, decimals)
+    })
+    return pts
+}

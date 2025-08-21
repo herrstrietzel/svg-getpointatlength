@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>svg-getpointatlength</title>
+
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml">
+    <link rel="mask-icon" href="favicon.svg" color="#000000">
+    <meta name="theme-color" content="#ffffff">
+
+
+    <link rel="stylesheet" href="demo/lib/ps-icons/ps-icons.css">
+    <link rel="stylesheet" href="demo/lib/details-enhanced/details-enhanced.css">
+    <link rel="stylesheet" href="demo/lib/ps-style-inputs/ps-style-inputs.css">
+
+
+
+
+    <!-- UI assets -->
+    <script src="demo/lib/ps-icons/ps-icons.js" defer></script>
+    <script src="demo/lib/ps-style-inputs/ps-style-inputs.js" defer></script>
+
+
+    <script src="demo/lib/elzoomo/elzoomo.js"></script>
+
+    <!-- 
+        <script src="demo/lib/ps-textarea-tools/ps-textarea-tools.js" defer></script>
+    -->
+
+    <script src="demo/path_samples.js"></script>
+    <script src="demo/path_samples_grouped.js"></script>
+
+
+
+    <!-- UI fields -->
+    <script src="demo/UI_fields.js"></script>
+    <script src="demo/lib/ps-generate-inputs/ps-generate-inputs.js" defer></script>
+    <script src="demo/lib/ps-generate-inputs/ps-generate-inputs_update.js" defer></script>
+
+
+
+
+    <!-- app -->
+    <script type="module" src="./demo/app.js"></script>
+    <link id="cssMain" rel="stylesheet" href="demo/css/style.css">
+    <link rel="stylesheet" href="demo/style_app.css">
+
+
+    <script src="helpers.js"></script>
+
+
+
+</head>
+
+<body class="body details-plus init hide-sidebar hide-help hide-info hide-preview hide-footer scrollbar">
+
+
+    <!-- init grid -->
+    <div class="grd-main2 grid-area-sidebar  --gap-1em ">
+
+        <!-- toolbar/settings  -->
+        <aside class="sidebar grid-area-sidebar mutation-listen">
+
+            <!-- 
+                <section class="sidebar-wrp --pst-stc pdd-1em --pdd-top --scroll-content --scrollbar">
+    
+    
+                </section>
+                
+            -->
+
+
+
+            <section class="sidebar-wrp pst-stc pdd-1em --pdd-top scroll-content scrollbar" id="optionsWrpInput">
+            </section>
+        </aside>
+
+
+        <aside class="sidebar grid-area-sidebar2 mutation-listen">
+            <section class="sidebar-wrp pst-stc pdd-1em --pdd-top scroll-content scrollbar" id="optionsWrpOutput">
+            </section>
+        </aside>
+
+        <main class="main grid-area-main layout">
+
+            <!-- gihub link -->
+            <header>
+                <a class="lnk-github" href="https://github.com/herrstrietzel/svg-getpointatlength"
+                    title="See github repository">
+                    <span data-icon="github-outine"></span>
+                </a>
+            </header>
+
+            <div id="rel" class="preview rel --pnt-evn-non elzoomo">
+
+                <!-- preview path -->
+                <svg id="svgPreview" class="svgPreview" viewBox="0 0 100 100" fill="none"
+                    data-zoom='{"minScale":0.5,"maxScale":100,"zoom":1,"zoomStep":1.001, "scaleStroke":true, "toolbar":true}'>
+                    <path id="pathPreview" d="" data-vector-effect="non-scaling-stroke" stroke-width="1.5%"
+                        stroke="#ccc" />
+
+                    <path id="segAtPoint" d="" fill="none" stroke="green" stroke-width="3%" stroke-opacity="0.5" />
+
+
+                    <!-- 
+                        <polygon id="polygonPreview" points="" vector-effect="non-scaling-stroke" />
+                        <polyline id="polylinePreview" points="" vector-effect="non-scaling-stroke" />
+                    -->
+
+                    <g id="resultsLengths">
+
+                        <!-- tangent angle indicator -->
+
+
+                        <!-- native getPointAtLength-->
+                        <line id="tangent" class="tangent" x1="0%" y1="0%" x2="0%" y2="0%" stroke="green"
+                            stroke-width="1%" style="stroke:green" />
+
+                        <circle id="splitN" cx="50%" cy="50%" r="2%" fill="blue" fill-opacity="1" />
+
+                        <!-- pathdata getPointAtLength -->
+                        <circle id="split" cx="50%" cy="50%" r="1%" fill="orange" fill-opacity="1" />
+
+                    </g>
+
+                    <g id="rectsBBox">
+                        <rect id="bboxRect" class="bboxRect" x="0" y="0" width="0" height="0" fill="none" stroke="#ccc"
+                            stroke-width="0.5%" pathLength="100" data-stroke-dasharray="0 0.5" stroke-linecap="round" />
+
+                        <rect id="bboxRectSegment" class="bboxRectSegment" x="0" y="0" width="0" height="0" fill="none"
+                            stroke="purple" pathLength="100" stroke-width="0.5%" data-stroke-dasharray="0 1"
+                            stroke-linecap="round" />
+
+                    </g>
+
+
+                    <g id="markers"></g>
+
+
+                    <g class="gPathPoly showMarkers">
+                        <path id="pathPoly" d="" fill="none" stroke="red" stroke-width="0.5%"
+                            style="stroke-width:0.5%; stroke:var(--color-focus);" />
+                    </g>
+
+
+                </svg>
+
+
+            </div>
+        </main>
+    </div>
+
+
+    <!-- markers to show commands -->
+    <svg id="svgMarkers" style="width:0; height:0; position:absolute; z-index:-1;float:left;">
+        <defs>
+            <marker class="svgMarker svgMarker-start" id="markerStart" overflow="visible" viewBox="0 0 10 10" refX="5"
+                refY="5" markerUnits="strokeWidth" markerWidth="10" markerHeight="10" orient="auto-start-reverse">
+                <circle cx="5" cy="5" r="2.5" style="fill:currentColor"></circle>
+
+                <marker class="svgMarker svgMarker-mid" id="markerRound" overflow="visible" viewBox="0 0 10 10" refX="5"
+                    refY="5" markerUnits="strokeWidth" markerWidth="10" markerHeight="10" orient="auto-start-reverse">
+                    <circle cx="5" cy="5" r="1.25" style="fill:currentColor"></circle>
+                </marker>
+        </defs>
+    </svg>
+
+
+</body>
+
+</html>

@@ -1,0 +1,263 @@
+/* typography
+5.5.2023
+*/
+
+html {
+    font-size: var(--font-size);
+}
+
+
+// reset margins defaults
+p,
+h1,
+h2,
+h3,
+h4,
+h5 {
+    text-rendering: optimizeLegibility;
+    font-feature-settings: "kern";
+}
+
+
+p,
+h1,
+h2,
+h3,
+h4,
+h5,
+ul,
+ol {
+    margin: 0
+}
+
+.p{
+    margin-bottom: var(--p-margin);
+}
+
+.h1,
+.h2,
+.h3 {
+    margin-bottom: var(--header-margin);
+}
+
+
+.h1 {
+    line-height: 1.2em;
+}
+
+.h2 {
+    line-height: 1.2em;
+}
+
+.h3 {
+    line-height: 1.2em;
+}
+
+.h1+.h2{
+    margin-top:-0.3em;
+}
+
+.h1,
+.h2,
+.h3 {
+    font-weight: var(--font-weight-bold);
+}
+
+.h1 {
+    font-size: var(--h1);
+}
+
+.h2 {
+    font-size: var(--h2);
+}
+
+.h3 {
+    font-size: var(--h3);
+}
+
+.h4 {
+    font-size: var(--h4);
+    font-weight: 700;
+}
+
+
+p{
+    @extend .p;
+}
+
+//extend
+h1 {
+    @extend .h1;
+}
+
+h2 {
+    @extend .h2;
+}
+
+h3 {
+    @extend .h3;
+}
+
+h4 {
+    @extend .h4;
+}
+
+
+.col-wht {
+    color: #fff !important;
+}
+
+
+.txt-cnt,
+.txt-alg-cnt {
+    text-align: center;
+}
+
+.txt-lft,
+.txt-alg-lft  {
+    text-align: left;
+}
+
+.txt-rgh,
+.txt-alg-rgh  {
+    text-align: right;
+}
+
+
+.txt-trn-uc {
+    text-transform: uppercase;
+}
+
+.txt-trn-lc{
+    text-transform: lowercase;
+}
+
+
+.txt-code,
+.pre,
+.code {
+    font-family: var(--font-code, monospace);
+    white-space: pre-line;
+    word-break: break-word;
+    display: inline-block;
+}
+
+code.code{
+    background: var(--color-bg-gray);
+    padding:0.3em;
+}
+
+
+.fnt-wgh-100 {
+    font-weight: 100;
+}
+
+.fnt-wgh-200 {
+    font-weight: 200;
+}
+
+.fnt-wgh-300 {
+    font-weight: 300;
+}
+
+.fnt-wgh-400 {
+    font-weight: 400;
+}
+
+.fnt-wgh-500 {
+    font-weight: 500;
+}
+
+.fnt-wgh-600 {
+    font-weight: 600;
+}
+
+.fnt-wgh-700 {
+    font-weight: 700;
+}
+
+.fnt-wgh-800 {
+    font-weight: 800;
+}
+
+.fnt-wgh-900 {
+    font-weight: 900;
+}
+
+.fnt-siz-0-5em {
+    font-size: 0.5em;
+}
+
+.fnt-siz-0-75em {
+    font-size: 0.75em;
+}
+
+.fnt-siz-1-5em {
+    font-size: 1.5em;
+}
+
+.fnt-siz-1em {
+    font-size: 1em;
+}
+
+.fnt-siz-2em {
+    font-size: 2em;
+}
+
+
+.txt-sml {
+    font-size: 0.85em;
+}
+
+
+@media(min-width: $md) {
+
+    html {
+        font-size: var(--font-size-md);
+    }
+
+    .h1 {
+        font-size: var(--h1_md);
+    }
+
+    .h2 {
+        font-size: var(--h2_md);
+    }
+
+    .h3 {
+        font-size: var(--h3_md);
+    }
+
+    .h4 {
+        font-size: var(--h4_md);
+    }
+}
+
+
+@media(min-width: $ld) {
+
+
+    html {
+        font-size: var(--font-size-ld);
+    }
+
+    .h1 {
+        font-size: var(--h1_ld);
+    }
+
+    .h1 {
+        font-size: var(--h1_ld);
+    }
+
+    .h2 {
+        font-size: var(--h2_ld);
+    }
+
+    .h3 {
+        font-size: var(--h3_ld);
+    }
+
+    .h4 {
+        font-size: var(--h4_ld);
+    }
+}

@@ -1,0 +1,98 @@
+
+
+/**
+* base style
+**/
+.li-setup{
+    padding-left: 1em;
+    li {
+        list-style-position: outside;
+        list-style-image: initial;
+        list-style-type: disc;
+        display: list-item;
+    }
+    ::marker {
+        color: var(--color-marker);
+        font-size: inherit
+    } 
+}
+
+.li-num {
+    //@extend .li-setup; 
+    padding-left: 1em;
+    list-style: decimal;
+    li {
+        list-style: decimal
+    }
+}
+
+.li-bll {
+    padding-left: 1em;
+    li {
+        list-style-position: outside;
+        list-style-image: initial;
+        list-style-type: disc;
+        display: list-item;
+    }
+    ::marker {
+        color: var(--color-marker);
+        font-size: inherit
+    } 
+}
+
+
+.ul-inl,
+.li-inl{
+     @extend .li-setup; 
+    //display:inline;
+    padding:0;
+
+    li{
+        display:inline-block;
+        margin-right:0.3em;
+    }
+}
+
+
+
+
+/***  no bullets ***/
+.li-non {
+    //@extend .li-setup;
+    padding-left: 0em;
+
+    li {
+        list-style-type: none;
+    }
+}
+
+/***  bullets ***/
+.li-bll {
+    @extend .li-setup;
+}
+
+/***  square ***/
+.li-sqr {
+    @extend .li-setup;
+    li {
+        list-style-type: square;
+    }
+}
+
+/***  dash ***/
+.li-dsh {
+    @extend .li-setup;
+    padding-left: 0.5em;
+
+    li {
+        list-style-type: '–';
+        padding-left: 0.3em;
+    }
+    ::marker {
+        color: inherit;
+        font-size: inherit;
+        
+    } 
+}
+
+

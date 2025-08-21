@@ -1,3 +1,9 @@
+export const {
+    abs, acos, asin, atan, atan2, ceil, cos, exp, floor,
+    log, hypot, max, min, pow, random, round, sin, sqrt, tan, PI
+} = Math;
+
+
 // Legendre Gauss weight and abscissa values
 export const lgVals = {}
 
@@ -7,9 +13,10 @@ export const lgVals = {
 }
 */
 
+
+
 export const PI2 = Math.PI * 2;
 export const PI_half = Math.PI * 0.5;
-
 //let deg2rad = Math.PI / 180;
 export const deg2rad = 0.017453292519943295;
 //let rad2deg = 180/Math.PI;

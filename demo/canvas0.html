@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Untitled</title>
+
+  <style>
+    canvas,
+    svg {
+      outline: 1px solid #ccc;
+      display: block;
+    }
+
+
+    .rlt {
+      position: relative;
+      width: 500px;
+      height: 300px;
+
+      &>* {
+        display: block;
+        position: absolute;
+        inset: 0;
+      }
+    }
+  </style>
+
+</head>
+
+<body>
+
+
+
+  <!-- partial:index.partial.html -->
+  <div class="rlt">
+    <canvas id="canvas" width="500" height="300" style="border:1px solid #ccc"></canvas>
+
+
+    <svg id="svg" width="500" viewBox="0 0 500 300" style="opacity:0.5">
+
+      <path id="path" d="" fill="none" stroke="cyan" stroke-width="1%" />
+
+      <!-- 
+        <circle id="circle" cx="0" cy="0" r="1" fill="none" stroke="blue" />
+        <rect id="rect" x="0" y="0" width="0" height="0" fill="none" stroke="magenta" />
+
+      -->
+    </svg>
+
+  </div>
+
+
+  <script src="../dist/svg-getpointatlength.js"></script>
+
+  <script src="canvas2svg.js"></script>
+
+  <script>
+
+
+
+  </script>
+
+
+  <script src="canvasarcto_demo.js"></script>
+
+  <script>
+
+
+
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+
+    // arcTo demo
+    let path_arcto = new Path2D_svg();
+
+    let p0 = { x: 0, y: 150 }
+    let cp1 = { x: 250, y: 150 }
+    let cp2 = { x: 100, y: 300 }
+    let r = 50
+
+    path_arcto.moveTo(p0.x, p0.y);
+    path_arcto.arcTo(cp1.x, cp1.y, cp2.x, cp2.y, r);
+    path_arcto.lineTo(cp2.x, cp2.y);
+
+
+    ctx.strokeStyle = "purple";
+    ctx.lineWidth = 2;
+    ctx.stroke(path_arcto);
+
+    let d_arcto = canvasArcto2SVG(p0, cp1, cp2, r).d;
+    path.setAttribute('d', path.getAttribute('d') + d_arcto);
+
+  </script>
+
+
+</body>
+
+</html>

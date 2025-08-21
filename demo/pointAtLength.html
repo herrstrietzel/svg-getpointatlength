@@ -5,68 +5,9 @@
     <meta charset="UTF-8">
     <title>Get point at length</title>
 
+    <link rel="stylesheet" href="styles.css">
+
     <style>
-        body {
-            font-family: sans-serif;
-        }
-
-        svg {
-            width: 50%;
-            overflow: visible;
-            border: 1px solid #ccc;
-            padding: 20%;
-        }
-
-
-
-        .grd {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 2em;
-            height: 95vh;
-        }
-
-
-        .col {
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            gap: 0;
-            justify-content: flex-start;
-        }
-
-        .col * {
-            margin-top: 0;
-            margin-bottom: 1rem;
-        }
-
-        textarea {
-            width: 100%;
-            display: block;
-            min-height: 10em;
-            height: 50%;
-            flex: 1 1 auto;
-
-        }
-
-
-        select,
-        input[type="text"],
-        input[type="range"] {
-            width: 100%;
-            display: block
-        }
-
-        #valLength {
-            display: block;
-
-        }
-
-        .previewPath {
-            fill: none;
-            stroke-width: 1%;
-            stroke: #000;
-        }
     </style>
 
 </head>
@@ -114,6 +55,15 @@
                     <option value="medium" selected>medium</option>
                     <option value="high">high</option>
                 </select>
+            </p>
+
+            <h3>Path data conversions</h3>
+            <p>
+                <label><input type="checkbox" id="inpArcsToCubics" name="inpArcsToCubics">ArcsToCubics</label>
+
+                <label><input type="checkbox" id="inpQuadraticsToCubics" name="inpQuadraticsToCubics"> Quadratic to
+                    cubic</label>
+
             </p>
 
 
@@ -173,13 +123,20 @@
                 svg.insertAdjacentHTML("beforeend", marker);
             }
 
-
         </script>
 
+        <script src="../dist/svg-getpointatlength.js"></script>
 
 
-<script src="../dist/svg-getpointatlength.js"></script>
+
         <!-- 
+
+<script src="getPointAtLengthLookup_old.js"></script>
+
+
+                    <script src="https://cdn.jsdelivr.net/npm/svg-getpointatlength@1.3.2/getPointAtLengthLookup.js"></script>
+
+
 
         <script src="https://cdn.jsdelivr.net/npm/svg-getpointatlength@latest/getPointAtLengthLookup.js"></script>
 
@@ -220,7 +177,7 @@
                 inputExample.append(option);
             }
 
-            let first = inputExample.options[8];
+            let first = inputExample.options[0];
             first.selected = true;
             svgInput.value = first.value;
 
@@ -232,11 +189,18 @@
             let resIdeal = ''
 
 
+            let conversions = {
+                arcToCubic: inpArcsToCubics.checked,
+                arcAccuracy: quality === 'high' ? 4 : 2,
+                quadraticToCubic: inpQuadraticsToCubics.checked,
+            }
 
+            let onlyLength = false;
+            let getTangent = true;
 
             perfStart()
             //let pathLengthLookup = getPathLengthLookup(pathData, quality)
-            let pathLengthLookup = getPathLengthLookup(d, quality)
+            let pathLengthLookup = getPathLengthLookup(d, quality, onlyLength, getTangent, conversions)
             perfEnd()
 
 
@@ -274,25 +238,18 @@
 
             });
 
-
-            inputQ.addEventListener('input', e => {
-                updateSVG()
+            [inpArcsToCubics, inpQuadraticsToCubics, inputQ].forEach(inp => {
+                inp.addEventListener('input', e => {
+                    updateSVG()
+                })
             })
 
 
+
             function updateSVG() {
-                d = svgInput.value
 
-                // if is element
-                if (d.trim().startsWith('<svg')) {
-                    let svg = new DOMParser().parseFromString(d, 'text/html').querySelector('svg');
-                    let allowed = ['path', 'polygon', 'polyline', 'line', 'rect', 'circle', 'ellipse'];
-                    let children = [...svg.children].filter(node => { return allowed.includes(node.nodeName.toLowerCase()) })
-                    let el = children.length ? children[0] : null;
-
-                    let pathData = getPathDataFromEl(el)
-                    d = pathData.map(com => { return [com.type, ...com.values] }).flat().join(' ')
-                }
+                let pathData = normalizePathInput(svgInput.value)
+                d = stringifyPathData(pathData)
 
                 let path = document.querySelector('path, polygon, polyline, line, rect, circle, ellipse')
 
@@ -311,13 +268,24 @@
 
             function updateLength() {
 
+
+                let conversions = {
+                    arcToCubic: inpArcsToCubics.checked,
+                    arcAccuracy: quality === 'high' ? 4 : 2,
+                    quadraticToCubic: inpQuadraticsToCubics.checked,
+                }
+
+                let onlyLength = false;
+                let getTangent = true;
+
+
                 // get pathlength lookup
                 quality = inputQ.value;
-                pathLengthLookup = getPathLengthLookup(d, quality)
+                pathLengthLookup = getPathLengthLookup(d, quality, onlyLength, getTangent, conversions)
                 totalLength = pathLengthLookup.totalLength
 
 
-                console.log('pathLengthLookup:', pathLengthLookup);
+                console.log('pathLengthLookup:', pathLengthLookup, conversions);
 
 
                 // get area

@@ -19,10 +19,24 @@ const stripDevComments = () => ({
         /* FORMATTING */
         .replace(/\r\n/g, '\n')
         .replace(/\n{3,}/g, '\n\n')
+        // remove Math
+        .replaceAll('Math.', '')
         .trim();
         
     }
 });
+
+
+const replaceMath = () => ({
+    name: 'replaceMath',
+    renderChunk(code) {
+        
+    return code
+        // remove Math
+        .replaceAll('Math.', '')
+    }
+});
+
 
 
 
@@ -45,10 +59,27 @@ export default [
                 name: libName,
                 extend: true,
                 exports: 'named',
-                plugins: [terser()]
+                plugins: [replaceMath(),terser()]
             },
         ]
     },
+
+    // IIFE Build - lite
+    {
+        input: 'src/index_lite.js',
+        output: [
+            {
+                file: `dist/${libName}_lite.js`,
+                format: 'iife',
+                name: libName,
+                extend: true,
+                exports: 'named',
+                plugins: [replaceMath(),terser()]
+            },
+        ]
+    },
+
+
     // ESM Build
     {
         input: 'src/index.js',
@@ -67,6 +98,20 @@ export default [
             },
         ]
     },
+
+    // ESM Build - lite
+    {
+        input: 'src/index_lite.js',
+        output: [
+            {
+                file: `dist/${libName}_lite.esm.js`,
+                format: 'es',
+                exports: 'named',
+                plugins: [replaceMath(), terser()]
+            },
+        ]
+    },
+
 
     // Node.js CJS Build
     {

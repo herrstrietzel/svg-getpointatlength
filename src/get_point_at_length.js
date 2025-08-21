@@ -1,105 +1,21 @@
-import { checkFlatnessByPolygonArea, svgArcToCenterParam, getAngle, getLegendreGaussValues, toParametricAngle, getEllipseLengthLG, pointAtT, getLength, getPointOnEllipse, getTangentAngle, rotatePoint } from './geometry';
+import { lgVals, deg2rad, rad2deg, PI2, PI, PI_half } from './constants.js';
+//import { PathLengthObject } from './PathLengthObject.js';
+
+import { checkFlatnessByPolygonArea, svgArcToCenterParam, getAngle, getLegendreGaussValues, toParametricAngle, getEllipseLengthLG, pointAtT, getLength, getPointOnEllipse, getTangentAngle, rotatePoint, normalizeAngle, getArcExtemes_fromParametrized, getBezierExtremes } from './geometry.js';
+
+import {roundPoint}  from './rounding.js';
 
 
-export function PathLengthObject(totalLength = 0, segments = [], pathData = []) {
-    this.totalLength = totalLength;
-    this.segments = segments;
-    this.pathData = pathData;
-}
-
-
-//pathLengthLookup
-PathLengthObject.prototype.getPointAtLength = function (length = 0, getTangent = false, getSegment = false) {
-    return getPointAtLengthCore(this, length, getTangent, getSegment);
-}
-
-PathLengthObject.prototype.getSegmentAtLength = function (length = 0, getTangent = true, getSegment = true) {
-    let segment = getPointAtLengthCore(this, length, getTangent, getSegment);
-    let { com, t, index, angle, x, y, segments } = segment
-    let M = { type: "M", values: [com.p0.x, com.p0.y] };
-
-
-    // convert closepath to explicit lineto
-    if(com.type.toLowerCase()==='z'){
-        let p = segments[segments.length-1].p;
-        com = { type: "L", values: [p.x, p.y] }
-    }
-
-    // get self contained path data
-    let pathData = [
-        M,
-        com
-    ];
-
-    let d = stringifyPathData(pathData);
-    let res = {
-        angle,
-        com,
-        index,
-        pathData,
-        d,
-        t,
-        x,
-        y
-    };
-
-    return res
-}
-
-PathLengthObject.prototype.splitPathAtLength = function (length = 0, getTangent = true, getSegment = true) {
-    let pt = getPointAtLengthCore(this, length, getTangent, getSegment);
-
-    let pathData = this.pathData;
-    let {x,y, index, commands } = pt;
-    let [com1, com2] = commands;
-    let M = { x: pathData[0].values[0], y: pathData[0].values[1] };
-    let pathData1 = [];
-    let pathData2 = [];
-
-    pathData.forEach((com, i) => {
-
-        let { type, values } = com;
-        if (i < index) {
-            pathData1.push(com)
-        }
-
-        // get split segment
-        else if (i === index) {
-            pathData1.push(com1)
-
-            // next path segment
-            pathData2.push(
-                { type: 'M', values: [x, y] },
-                com2
-            )
-        }
-
-        else if (i > index) {
-            if (type.toLowerCase() === 'z') {
-                pathData2.push(
-                    { type: 'L', values: [M.x, M.y] },
-                )
-
-            } else {
-                pathData2.push(com)
-            }
-        }
-    })
-
-
-    // stringified pathData
-    let d1 = stringifyPathData(pathData1);
-    let d2 = stringifyPathData(pathData2);
-
-    return {pathDataArr: [pathData1, pathData2], dArr:[d1, d2], index };
-}
+//import { renderPoint } from './visualize.js';
+//import { getAreaData } from './getArea.js';
+//import { normalizePathData, parse, parsePathDataNormalized, stringifyPathData } from './pathData_parse.js';
 
 
 
 
-function getPointAtLengthCore(obj, length = 0, getTangent = false, getSegment = false) {
+export function getPointAtLength(lookup, length = 0, getTangent = true, getSegment = true, decimals=-1) {
 
-    let { segments, totalLength } = obj;
+    let { segments, pathData, totalLength } = lookup;
 
     // disable tangents if no angles present in lookup
     if (!segments[0].angles.length) getSegment = false;
@@ -119,8 +35,11 @@ function getPointAtLengthCore(obj, length = 0, getTangent = false, getSegment = 
     let foundSegment = false;
     let pt = { x: M.x, y: M.y };
 
+    // round - opional
+    if(decimals>-1) pt = roundPoint(pt)
+
     // tangent angles for Arcs
-    let tangentAngle, rx, ry, xAxisRotation, xAxisRotation_deg, sweep, largeArc, deltaAngle, perpendicularAdjust;
+    let tangentAngle, rx, ry, xAxisRotation, tangentAdjust = 0;
 
 
     if (getTangent) {
@@ -128,19 +47,14 @@ function getPointAtLengthCore(obj, length = 0, getTangent = false, getSegment = 
 
         if (seg0.type === 'A') {
 
-            // update arc properties
-            ({ rx, ry, xAxisRotation, xAxisRotation_deg, sweep, largeArc, deltaAngle } = seg0.points[1]);
+            let { arcData } = seg0;
+
+            ({ rx, ry, xAxisRotation, tangentAdjust } = !arcData.isEllipse ? arcData : seg0.arcData_param);
+
 
             if (rx !== ry) {
-
-                // adjust for clockwise or counter clockwise
-                perpendicularAdjust = deltaAngle < 0 ? Math.PI * -0.5 : Math.PI * 0.5;
-
                 // calulate tangent angle
-                tangentAngle = getTangentAngle(rx, ry, angle0) - xAxisRotation;
-
-                // adjust for axis rotation
-                tangentAngle = xAxisRotation ? tangentAngle + perpendicularAdjust : tangentAngle;
+                tangentAngle = normalizeAngle(getTangentAngle(rx, ry, angle0) - xAxisRotation + tangentAdjust);
                 pt.angle = tangentAngle;
 
             }
@@ -151,6 +65,7 @@ function getPointAtLengthCore(obj, length = 0, getTangent = false, getSegment = 
     // return segment data
     if (getSegment) {
         pt.index = segments[0].index;
+        pt.segIndex = 0;
         pt.com = segments[0].com;
     }
 
@@ -161,8 +76,11 @@ function getPointAtLengthCore(obj, length = 0, getTangent = false, getSegment = 
 
     //return last on-path point when length is larger or equals total length
     else if (length >= totalLength) {
-        let ptLast = seglast.points.slice(-1)[0]
-        let angleLast = seglast.angles.slice(-1)[0]
+
+        //console.log('last', length);
+
+        let ptLast = seglast.points[seglast.points.length - 1]
+        let angleLast = seglast.angles[seglast.angles.length - 1]
 
         pt.x = ptLast.x;
         pt.y = ptLast.y;
@@ -171,37 +89,36 @@ function getPointAtLengthCore(obj, length = 0, getTangent = false, getSegment = 
             pt.angle = angleLast;
 
             if (seglast.type === 'A') {
-                ({ rx, ry, xAxisRotation } = seglast.points[1]);
+
+                let { arcData } = seglast;
+                ({ rx, ry, xAxisRotation, tangentAdjust } = !arcData.isEllipse ? arcData : seglast.arcData_param);
+
                 if (rx !== ry) {
 
                     // calulate tangent angle
-                    tangentAngle = getTangentAngle(rx, ry, angleLast) - xAxisRotation;
-
-                    // adjust for clockwise or counter clockwise
-                    perpendicularAdjust = deltaAngle < 0 ? Math.PI * -0.5 : Math.PI * 0.5;
-
-                    // adjust for axis rotation
-                    tangentAngle = xAxisRotation ? tangentAngle + perpendicularAdjust : tangentAngle;
+                    tangentAngle = normalizeAngle(getTangentAngle(rx, ry, angleLast) - xAxisRotation + tangentAdjust);
                     pt.angle = tangentAngle;
                 }
             }
         }
 
         if (getSegment) {
-            pt.index = segments.length - 1;
+            //pt.index = segments.length - 1;
+            pt.index = pathData.length-1;
+            pt.segIndex = segments.length-1;
             pt.com = segments[segments.length - 1].com;
         }
+
+        if(decimals>-1) pt = roundPoint(pt)
         return pt;
     }
 
     //loop through segments
-
-    for (let i = 0, l = segments.length; i < l && !foundSegment; i++) {
+    for (let i = 0; i < segments.length && !foundSegment; i++) {
         let segment = segments[i];
         let { type, lengths, points, total, angles, com } = segment;
         let end = lengths[lengths.length - 1];
         let tStep = 1 / (lengths.length - 1);
-        let p0 = com.p0;
 
         // find path segment
         if (end >= length) {
@@ -222,17 +139,21 @@ function getPointAtLengthCore(obj, length = 0, getTangent = false, getSegment = 
                 case 'A':
 
                     diffLength = end - length;
+                    let { arcData } = segment;
+                    //console.log('arcData', arcData);
+                    let { rx, ry, cx, cy, startAngle, endAngle, deltaAngle, xAxisRotation, tangentAdjust, sweep } = !arcData.isEllipse ? arcData : segment.arcData_param;
 
-                    let { rx, ry, cx, cy, startAngle, endAngle, deltaAngle, sweep, largeArc, xAxisRotation, xAxisRotation_deg } = segment.points[1];
+                    // final on-path point
+                    let pt1 = segment.points[1]
+                    let xAxisRotation_deg = xAxisRotation * rad2deg;
+
 
                     // is ellipse
                     if (rx !== ry) {
 
-                        // adjust for clockwise or counter clockwise
-                        perpendicularAdjust = deltaAngle < 0 ? Math.PI * -0.5 : Math.PI * 0.5;
+                        //console.log('ellipse', length);
 
-
-                        for (let i = 1, l = lengths.length; i < l && !foundT; i++) {
+                        for (let i = 1; i < lengths.length && !foundT; i++) {
                             let lengthN = lengths[i];
 
                             if (length < lengthN) {
@@ -252,30 +173,37 @@ function getPointAtLengthCore(obj, length = 0, getTangent = false, getSegment = 
                                 // get point on ellipse
                                 pt = getPointOnEllipse(cx, cy, rx, ry, angleI, xAxisRotation, false, false);
 
-                                // calculate tangent angle
-                                tangentAngle = getTangentAngle(rx, ry, angleI) - xAxisRotation;
-
-                                // adjust for axis rotation
-                                tangentAngle = xAxisRotation ? tangentAngle + perpendicularAdjust : tangentAngle
+                                // calulate tangent angle
+                                tangentAngle = normalizeAngle(getTangentAngle(rx, ry, angleI) - xAxisRotation + tangentAdjust)
 
                                 // return angle
                                 pt.angle = tangentAngle;
 
+
                                 // segment info
                                 if (getSegment) {
-                                    // final on-path point
-                                    let pt1 = segment.points[2]
 
                                     // recalculate large arc based on split length and new delta angles
                                     let delta1 = Math.abs(angleI - startAngle)
                                     let delta2 = Math.abs(endAngle - angleI)
                                     let largeArc1 = delta1 >= Math.PI ? 1 : 0
                                     let largeArc2 = delta2 >= Math.PI ? 1 : 0
+
                                     pt.commands = [
                                         { type: 'A', values: [rx, ry, xAxisRotation_deg, largeArc1, sweep, pt.x, pt.y] },
                                         { type: 'A', values: [rx, ry, xAxisRotation_deg, largeArc2, sweep, pt1.x, pt1.y] },
                                     ]
+
                                 }
+
+                            } 
+                            // is at end of segment
+                            else if(length === lengthN){
+                                pt = pt1
+                                tangentAngle = normalizeAngle( getTangentAngle(rx, ry, endAngle) - xAxisRotation + tangentAdjust)
+                                pt.angle = tangentAngle
+                                //console.log('last!!!', pt);
+                                foundT = true;
                             }
                         }
 
@@ -286,18 +214,39 @@ function getPointAtLengthCore(obj, length = 0, getTangent = false, getSegment = 
                         let newAngle = -deltaAngle * newT;
 
                         // rotate point
-                        p0 = segment.points[0]
-                        pt = rotatePoint(p0, cx, cy, newAngle)
+                        let cosA = Math.cos(newAngle);
+                        let sinA = Math.sin(newAngle);
+                        let p0 = segment.points[0];
+
+                        pt = {
+                            x: (cosA * (p0.x - cx)) + (sinA * (p0.y - cy)) + cx,
+                            y: (cosA * (p0.y - cy)) - (sinA * (p0.x - cx)) + cy
+                        }
 
                         // angle
                         if (getTangent) {
-                            let angleOff = deltaAngle > 0 ? Math.PI / 2 : Math.PI / -2;
-                            pt.angle = startAngle + (deltaAngle * newT) + angleOff
-
+                            let angleOff = deltaAngle > 0 ? PI_half : -PI_half;
+                            pt.angle = normalizeAngle(startAngle + (deltaAngle * newT) + angleOff)
                         }
-                        //console.log(getTangent, pt.angle);
 
+                        // segment info
+                        if (getSegment) {
+                            let angleI = Math.abs(deltaAngle * newT);
+
+                            let delta1 = Math.abs(deltaAngle - angleI)
+                            let delta2 = Math.abs(deltaAngle - delta1)
+                            let largeArc1 = delta1 >= Math.PI ? 1 : 0
+                            let largeArc2 = delta2 >= Math.PI ? 1 : 0
+
+                            //console.log('angleI', angleI, 'deltaAngle', deltaAngle, 'delta1', delta1, newT);
+
+                            pt.commands = [
+                                { type: 'A', values: [rx, ry, xAxisRotation_deg, largeArc1, sweep, pt.x, pt.y] },
+                                { type: 'A', values: [rx, ry, xAxisRotation_deg, largeArc2, sweep, pt1.x, pt1.y] },
+                            ]
+                        }
                     }
+
 
                     break;
                 case 'C':
@@ -328,9 +277,7 @@ function getPointAtLengthCore(obj, length = 0, getTangent = false, getSegment = 
 
                             // length between previous and current t
                             let tSegLength = lengthAtT - lengthAtTPrev;
-                            // difference between length at t and exact length
                             let diffLength = lengthAtT - length;
-
 
                             // ratio between segment length and difference
                             let tScale = (1 / tSegLength) * diffLength || 0;
@@ -348,11 +295,15 @@ function getPointAtLengthCore(obj, length = 0, getTangent = false, getSegment = 
         }
 
         if (getSegment) {
+            //pathdata index
             pt.index = segment.index;
+            //segment index
+            pt.segIndex = segment.segIndex;
             pt.com = segment.com;
         }
 
     }
 
     return pt;
+
 }

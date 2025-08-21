@@ -6,6 +6,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Split path</title>
 
+    <link rel="stylesheet" href="styles.css">
+
+
     <style>
         svg {
             display: block;
@@ -27,6 +30,7 @@
         textarea {
             width: 100%;
             min-height: 10em;
+            max-height: 10em;
         }
     </style>
 
@@ -76,8 +80,9 @@
 
     <svg id="svg" viewBox="0 20 300 100">
 
+
         <path id="path" d="M0 100 Q 50 0 100 50 C 133.33 83.33 166.67 83.33 200 50 
-           A 50 25 20 1 1 275 100 z" fill="none" stroke="#ccc" />
+           A 25 25 20 1 1 275 100 z" fill="none" stroke="#ccc" />
 
         <path id="pathSeg" d="" fill="none" stroke="blue" opacity="0.5" stroke-width="3" />
 
@@ -88,12 +93,22 @@
 
     </svg>
 
+    <h3>Input Path data</h3>
+
+    <textarea id="inputPath">
+        M0 100 Q 50 0 100 50 C 133.33 83.33 166.67 83.33 200 50 
+        A 50 25 20 1 1 275 100 z
+    </textarea>
+
+
     <div class="grd">
 
         <div class="col">
+            <h3>Path 1</h3>
             <textarea id="m1"></textarea>
         </div>
         <div class="col">
+            <h3>Path 2</h3>
             <textarea id="m2"></textarea>
         </div>
 
@@ -103,14 +118,40 @@
 
     <script>
 
-        let d = path.getAttribute('d');
+        let d = inputPath.value;
+        path.setAttribute('d', d);
+
         let lookup = getPathLengthLookup(d);
         let { totalLength, pathData } = lookup;
         console.log(lookup);
-
         // init
         inputLength.max = totalLength;
         update()
+
+        //inputPath
+        inputPath.addEventListener('input', e => {
+
+            d = inputPath.value;
+            path.setAttribute('d', d);
+
+            lookup = getPathLengthLookup(d);
+            ({ totalLength, pathData } = lookup);
+            console.log(lookup);
+            // init
+            inputLength.max = totalLength;
+
+
+            // adjust viewBox
+            let vB = path.getBBox()
+            let w = vB.width || 100
+            let h = vB.height || 100
+            svg.setAttribute('viewBox', [vB.x, vB.y, w, h].join(' '))
+
+
+
+            update()
+        })
+
 
 
         inputLength.addEventListener('input', e => {

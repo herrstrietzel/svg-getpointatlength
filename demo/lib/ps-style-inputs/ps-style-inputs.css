@@ -1,0 +1,158 @@
+.input-wrap input[type="checkbox"],
+.input-wrap input[type="radio"] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  clip-path: inset(50%);
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+}
+
+.input-wrap {}
+
+
+.icon-toggle-wrap,
+.input-icon-wrap {
+  --opacity1: 1;
+  --opacity2: 0;
+  display: inline-block;
+  position: relative;
+  font-size: 1em;
+  height: 1em;
+  width: 1em;
+  cursor: pointer;
+}
+
+.icon-toggle-wrap .icn-svg,
+.feather-input-icon {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 1em;
+  width: auto;
+  transform: translateY(0.15em);
+  transition: 0.2s;
+  color: var(--color-text);
+}
+
+.icon-toggle-wrap .icn-svg-1,
+.feather-input-icon1 {
+  opacity: var(--opacity1);
+}
+
+.icon-toggle-wrap .icn-svg-2,
+.feather-input-icon2 {
+  opacity: var(--opacity2);
+}
+
+
+.input-wrap:focus-within .feather-input-icon {
+  /* outline: 1px solid var(--color-focus, #000); */
+  color: var(--color-focus);
+}
+
+.btn-active .icn-svg,
+.input-wrap:has(input:checked) .feather-input-icon {
+  --opacity2: 1;
+  --opacity1: 0;
+}
+
+
+
+.input-range {
+  /* margin: 0.5em 0 0rem 0; */
+  margin-bottom: 0.5rem;
+}
+
+.input-range-vals {
+  order: -1;
+}
+
+.input-range-val {
+  min-width: 3ch;
+  display: inline-block;
+  text-align: left;
+}
+
+.input-infos {
+  /* border: 1px solid var(--color-text);
+    background-color: #ddd;
+
+  */
+  border-radius: var(--border-radius, 0.5em);
+  margin: 0.5em 0;
+  /* padding:0.5em; */
+  font-size: 1em;
+}
+
+.input-range-wrap {
+  display: flex;
+  gap: 0.5em;
+  align-items: center;
+}
+
+.input-range-vals {
+  flex-grow: 1;
+  flex-shrink: 0;
+  line-height: 1em;
+  height: 1em;
+  font-weight: 400;
+}
+
+
+
+.label-inline,
+.label-inline-block,
+.label-block {
+  margin-bottom: 0.3em
+}
+
+.label-block {
+  margin-top: 0.5em
+}
+
+.input-icon-wrap {
+  font-size: 1em;
+  line-height: 0px;
+  transform: scale(1.2)
+}
+
+
+
+.wrap-textarea{
+  --pdd-top: 1rem;
+  --mrg-top: 1rem;
+  margin-top:var(--mrg-top);
+  padding-top:var(--pdd-top);
+}
+
+
+.wrap-textarea label {
+  margin: 0
+}
+
+
+/**
+* toolbar
+*/
+.toolbar-wrap {
+}
+
+
+.btn-toolbar {
+  .icn-svg {
+      margin: 0
+  }
+}
+
+.btn-toggle.active .icn-svg {
+  stroke-width: 10px;
+  transform: scale(1.2);
+}
+
+.btn-toggle .icn-svg {
+  stroke-width: 6px;
+  transition: var(--transition, 0.3s);
+  transform-origin: center;
+}

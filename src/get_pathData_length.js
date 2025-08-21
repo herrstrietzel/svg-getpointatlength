@@ -1,18 +1,95 @@
-import { lgVals, deg2rad, rad2deg, PI2, PI_half } from './constants.js';
-import { checkFlatnessByPolygonArea, svgArcToCenterParam, getAngle, getLegendreGaussValues, toParametricAngle, getEllipseLengthLG, pointAtT, getLength, normalizeAngle } from './geometry';
+import { lgVals, deg2rad, rad2deg, PI, PI2, PI_half } from './constants.js';
+import { checkFlatnessByPolygonArea, svgArcToCenterParam, getAngle, getLegendreGaussValues, toParametricAngle, getEllipseLengthLG, pointAtT, getLength, normalizeAngle } from './geometry.js';
 //import { getPathDataFromEl } from './pathData_parse_els.js';
 //import {PathLengthObject} from './point_at_length.js';
-
 //import { getCommandLength } from './pathData_getCommandLength.js'
 //import { parsePathDataNormalized_old } from './pathData_parse.js';
 
-//const lgVals = {}
 
-const {
-    abs, acos, asin, atan, atan2, ceil, cos, exp, floor,
-    log, max, min, pow, random, round, sin, sqrt, tan, PI
-} = Math;
+//import { PathLengthObject } from './get_PathLengthObject.js';
+import { normalizePathInput } from './normalizeInput.js';
+//import { parse, parsePathDataNormalized, stringifyPathData } from './pathData_parse.js';
 
+
+export function PathLengthObject(props = {}) {
+    Object.assign(this, props);
+}
+
+
+// just a convenience wrapper
+export function getPathLookup(d, precision = 'medium', onlyLength = false, getTangent = true, {
+    arcToCubic=false,
+    arcAccuracy= 2,
+    quadraticToCubic= false
+}={}){
+    return getPathLengthLookup(d, precision, onlyLength, getTangent, {arcToCubic, arcAccuracy, quadraticToCubic})
+}
+
+
+export function getPathLengthLookup(d, precision = 'medium', onlyLength = false, getTangent = true, 
+{
+    // command conversions: disabled by default
+    arcToCubic=false,
+    arcAccuracy= 2,
+    quadraticToCubic= false
+}={}
+
+) {
+
+    /**
+     * if cached JSON
+     */
+
+
+    if(d && typeof d==='string' && d.includes('totalLength') && d.includes('segments') ){
+        try{
+            let lengthLookup = JSON.parse(d);    
+            let lookup = new PathLengthObject(lengthLookup);
+            //console.log('lookup from cache', lookup);
+            return lookup;
+        }catch{
+            throw Error("No valid JSON");
+        }
+    }
+
+    // exit
+    if (!d) throw Error("No path data defined");
+
+    // increase arc to cubic precision for high quality settings
+    if(arcToCubic && precision==='high') arcAccuracy=4;
+    let conversions = {arcToCubic, arcAccuracy, quadraticToCubic};
+    let pathData = normalizePathInput(d,  conversions);
+
+    // exit
+    if (!pathData.length) throw Error("No valid path data to parse");
+
+    /**
+     * create lookup
+     * object
+     */
+    let lengthLookup = getPathLengthLookupFromPathData(pathData, precision, onlyLength, getTangent)
+    lengthLookup.pathData = pathData;
+
+    if (onlyLength) {
+        return lengthLookup.pathLength;
+    } else {
+        return new PathLengthObject(lengthLookup);
+    }
+}
+
+
+
+// simple length calculation
+export function getPathLength(d, precision = 'medium', onlyLength = true) {
+    let pathData = normalizePathInput(d);
+    return getPathDataLength(pathData, precision, onlyLength);
+}
+
+
+// only total pathlength
+export function getPathDataLength(pathData, precision = 'medium', onlyLength = true) {
+    return getPathLengthLookupFromPathData(pathData, precision, onlyLength)
+}
 
 
 
@@ -22,6 +99,7 @@ export function getPathLengthLookupFromPathData(pathData, precision = 'medium', 
     // disable tangent calculation in length-only mode
     if (onlyLength) getTangent = false;
 
+
     /**
      * auto adjust Legendre-Gauss accuracy
      * precision for arc approximation
@@ -29,7 +107,7 @@ export function getPathLengthLookupFromPathData(pathData, precision = 'medium', 
 
     let auto_lg = precision === 'high' ? true : false;
     let lg = precision === 'medium' ? 24 : 12;
-    let lgArr = [12, 24, 36, 48, 60, 64, 72, 96];
+    let lgArr = [12, 24, 36, 48, 60, 64, 72];
 
     // add weight/abscissa values if not existent
     let wa_key = `wa${lg}`;
@@ -49,11 +127,12 @@ export function getPathLengthLookupFromPathData(pathData, precision = 'medium', 
     let pathLength = 0;
     let M = pathData[0];
     let lengthLookup = { totalLength: 0, segments: [] };
-    let p0
-    let options = {}
+    let p0={x:M.values[0], y:M.values[0]}
     let tangentAdjust = 0;
 
+    
 
+    let segIndex =0
     for (let i = 1; i < l; i++) {
         let comPrev = pathData[i - 1];
         let valuesPrev = comPrev.values;
@@ -73,12 +152,14 @@ export function getPathLengthLookupFromPathData(pathData, precision = 'medium', 
         let lengthObj = {
             type: type,
             index: i,
+            segIndex,
             com: { type: type, values: values, p0: p0 },
             lengths: [],
             points: [],
             angles: [],
             total: 0,
         };
+
 
         // interpret closePath as lineto
         switch (type) {
@@ -96,11 +177,8 @@ export function getPathLengthLookupFromPathData(pathData, precision = 'medium', 
                     p = { x: M.values[0], y: M.values[1] };
                     lengthObj.type = "L";
                 }
+                len = getLength([p0, p]);
                 lengthObj.points.push(p0, p);
-
-                // get length
-                options = { type, p0, com, p, t };
-                len = getCommandLength(options);
 
                 if (getTangent) {
                     angle = getAngle(p0, p)
@@ -114,27 +192,40 @@ export function getPathLengthLookupFromPathData(pathData, precision = 'medium', 
                     x: com.values[5],
                     y: com.values[6]
                 }
-                let xAxisRotation = com.values[2],
-                    largeArc = com.values[3],
-                    sweep = com.values[4];
+
+                // we take xAxis rotation from parametrisation to adjust for circular arcs
+                let [largeArc, sweep] = [com.values[3], com.values[4]];
 
                 // get parametrized arc properties
-                let arcData = svgArcToCenterParam(p0.x, p0.y, com.values[0], com.values[1], com.values[2], largeArc, sweep, p.x, p.y)
-                let { cx, cy, rx, ry, startAngle, endAngle, deltaAngle } = arcData
-
-                // perpendicular adjust for tangents
-                tangentAdjust = !xAxisRotation ? PI*-1 : (!sweep  ? PI * -0.5 : PI * 0.5);
-                tangentAdjust = xAxisRotation<0 ? tangentAdjust*-1 : tangentAdjust;
+                let arcData = svgArcToCenterParam(p0.x, p0.y, com.values[0], com.values[1], com.values[2], largeArc, sweep, p.x, p.y, false)
+                let { cx, cy, rx, ry, startAngle, endAngle, deltaAngle, xAxisRotation } = arcData
 
 
+                tangentAdjust = !xAxisRotation ? (!sweep ? -PI : 0) : (!sweep ? -PI_half : PI_half);
+                tangentAdjust = xAxisRotation < 0 ? tangentAdjust * -1 : tangentAdjust;
+
+
+                arcData.tangentAdjust = tangentAdjust;
+                arcData.isEllipse = rx!==ry;
+
+                // original path data for area calculations
+                lengthObj.arcData = arcData;
+                
+
+                let deltaAngle_param = deltaAngle;
 
                 /** 
                  * if arc is elliptic
                  */
                 if (rx !== ry) {
 
+                    // convert x-axis-rotation to radians
+                    xAxisRotation = xAxisRotation * deg2rad;
+                    //let xAxisRotation_rad = xAxisRotation * deg2rad;
+
+
                     // values are alredy in radians
-                    let degrees = false;
+                    //let degrees = false;
 
                     // add weight/abscissa values if not existent
                     let wa_key = `wa${lg}`;
@@ -156,20 +247,17 @@ export function getPathLengthLookupFromPathData(pathData, precision = 'medium', 
                      * increases performance
                      */
 
-                    // convert x-axis-rotation to radians
-                    xAxisRotation = xAxisRotation * PI / 180;
-
 
                     startAngle = toParametricAngle((startAngle - xAxisRotation), rx, ry)
                     endAngle = toParametricAngle((endAngle - xAxisRotation), rx, ry)
 
                     // recalculate parametrized delta
-                    let delta_param = endAngle - startAngle;
+                    deltaAngle_param = endAngle - startAngle;
 
-                    let signChange = deltaAngle > 0 && delta_param < 0 || deltaAngle < 0 && delta_param > 0;
+                    let signChange = deltaAngle > 0 && deltaAngle_param < 0 || deltaAngle < 0 && deltaAngle_param > 0;
 
                     //deltaAngle = xAxisRotation>0 ? endAngle- startAngle: deltaAngle;
-                    deltaAngle = signChange ? deltaAngle : delta_param;
+                    deltaAngle = signChange ? deltaAngle : deltaAngle_param;
 
 
                     // adjust end angle
@@ -181,6 +269,7 @@ export function getPathLengthLookupFromPathData(pathData, precision = 'medium', 
                         endAngle -= PI * 2
                     }
 
+
                     // precision
                     let lenNew = 0;
 
@@ -190,10 +279,8 @@ export function getPathLengthLookupFromPathData(pathData, precision = 'medium', 
 
                     for (let i = 1; i < tDivisionsC; i++) {
                         let endAngle = startAngle + deltaAngle / tDivisionsC * i;
-                        //lenNew = getEllipseLengthLG(rx, ry, startAngle, endAngle, 0, false, degrees, wa);
 
                         lenNew = getEllipseLengthLG(rx, ry, startAngle, endAngle, wa)
-
 
                         len += lenNew;
                         lengthObj.lengths.push(lenNew + pathLength)
@@ -206,6 +293,24 @@ export function getPathLengthLookupFromPathData(pathData, precision = 'medium', 
                     // last length - use higher precision
                     len = getEllipseLengthLG(rx, ry, startAngle, endAngle, wa48)
 
+
+                    // parametrized arc data for tangent calculations
+                    lengthObj.arcData_param = {
+                        cx,
+                        cy,
+                        rx,
+                        ry,
+                        deltaAngle,
+                        deltaAngle_param,
+                        startAngle,
+                        endAngle,
+                        largeArc,
+                        sweep,
+                        xAxisRotation,
+                        //xAxisRotation_rad,
+                        tangentAdjust,
+                        isEllipse: rx!==ry
+                    }
 
                 }
                 // circular arc
@@ -228,23 +333,7 @@ export function getPathLengthLookupFromPathData(pathData, precision = 'medium', 
                     }
                 }
 
-
-                lengthObj.points = [
-                    p0,
-                    {
-                        startAngle,
-                        deltaAngle,
-                        endAngle,
-                        xAxisRotation,
-                        xAxisRotation_deg: xAxisRotation * rad2deg,
-                        tangentAdjust,
-                        largeArc,
-                        sweep,
-                        rx,
-                        ry,
-                        cx,
-                        cy
-                    }, p];
+                lengthObj.points = [p0, p];
                 break;
 
             case "C":
@@ -254,7 +343,6 @@ export function getPathLengthLookupFromPathData(pathData, precision = 'medium', 
                 let pts = type === 'C' ? [p0, cp1, cp2, p] : [p0, cp1, p];
                 tDivisions = (type === 'Q') ? tDivisionsQ : tDivisionsC
 
-                options = { p0, type, com, cp1, cp2, p, t: 1, wa, lg };
 
                 lengthObj.lengths.push(pathLength);
 
@@ -326,7 +414,9 @@ export function getPathLengthLookupFromPathData(pathData, precision = 'medium', 
                 } else {
 
 
-                    len = getCommandLength(options);
+                    //len = getCommandLength(options);
+                    // no adaptive lg accuracy - take 24n
+                    len = !auto_lg ? getLength(pts, 1, lg) : getLength(pts, 1, lgArr[0]);
 
                     /**
                      * auto adjust accuracy for cubic bezier approximation 
@@ -345,8 +435,10 @@ export function getPathLengthLookupFromPathData(pathData, precision = 'medium', 
                         for (let i = 1; i < lgArr.length && !foundAccuracy; i++) {
                             let lgNew = lgArr[i];
 
-                            options.lg = lgNew;
-                            lenNew = getCommandLength(options);
+                            //options.lg = lgNew;
+                            //lenNew = getCommandLength(options);
+                            lenNew = getLength(pts, 1, lgNew)
+
 
                             //precise enough or last
                             diff = Math.abs(lenNew - len)
@@ -374,16 +466,13 @@ export function getPathLengthLookupFromPathData(pathData, precision = 'medium', 
 
 
                     // calculate lengths at sample t division points
-                    let lenN = 0;
-
                     for (let d = 1; d < tDivisions; d++) {
                         t = (1 / tDivisions) * d;
 
-                        options.t = t;
-                        lenN = getCommandLength(options) + pathLength;
-                        //console.log(lenN1,len2 );
-                        lengthObj.lengths.push(lenN);
+                        //lenN = getCommandLength(options) + pathLength;
+                        //lengthObj.lengths.push(lenN);
 
+                        lengthObj.lengths.push(getLength(pts, t, lg) + pathLength);
                     }
 
                     lengthObj.points = pts;
@@ -404,15 +493,17 @@ export function getPathLengthLookupFromPathData(pathData, precision = 'medium', 
         // ignore M starting point commands
         if (type !== "M") {
             lengthLookup.segments.push(lengthObj);
+            segIndex++
         }
         lengthLookup.totalLength = pathLength;
 
 
-        // add original command if it was converted for eliptic arcs
-        if (com.index) {
-            lengthObj.index = com.index;
-            lengthObj.com = com.com;
-        }
+        /*
+        lengthLookup.segments.push(lengthObj);
+        lengthLookup.totalLength = pathLength;
+        */
+
+
 
         // interpret z closepaths as linetos
         if (type === 'Z') {

@@ -1,0 +1,249 @@
+details {
+  --transition-duration: 0.5s;
+  --marker-icon: '\276F';
+  --marker-scale: scale(1);
+  --marker-translate: translate(0, 0);
+  --marker-rounded-padding: 0.1em;
+  --marker-rotation: rotate(0deg);
+  --marker-icon-size: 1em;
+  --marker-icon-color: inherit;
+  --marker-font-weight: 400;
+  --summary-gap: 0.3em;
+}
+
+summary {
+  cursor: pointer;
+}
+
+/** 
+    * "Core style": expanding and collapsing 
+    * we need to wrap the detail's content twice
+    * 1. an outer wrap introducing a grid display context
+    * - specifying the transition speed from 0fr to 1fr
+    * 2. an inner content wrap with hidden overflow
+    **/
+
+.details-content {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows var(--transition-duration);
+}
+
+
+.details-content-inner {
+  overflow: hidden;
+}
+
+
+.details-content-expanded {
+  grid-template-rows: 1fr;
+}
+
+/* fully expanded - show overflow */
+.details-content-open>.details-content-inner {
+  overflow: visible;
+}
+
+
+/* CSS normalization to avoid/mitigate layout shifts */
+.details-wrap summary {
+  padding-left: calc(1em + var(--summary-gap));
+  list-style-type: none;
+  display: flex;
+  align-items: center;
+
+  &:before {
+    content: var(--marker-icon);
+    display: inline-block;
+    text-align: center;
+    width: 1em;
+    margin-right: var(--summary-gap);
+    margin-left: calc(-1em - var(--summary-gap));
+    transform-box: fill-box;
+    transform-origin: 50%;
+    transition: transform var(--transition-duration);
+    transform: translateY(-0.05em);
+  }
+}
+
+.details-wrap details[open] {
+  &>summary:before {
+    transform: rotate(90deg);
+  }
+}
+
+
+/**
+  * hide default detail markers
+  */
+summary.summary {
+  padding-left: 0;
+  list-style-type: none;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--summary-gap);
+  padding-left: 0;
+  position: relative;
+
+  /* hide default summary marker replacements */
+  &:before {
+    content: '';
+    display: none;
+  }
+}
+
+.summary .summary-marker+* {
+  display: inline-block;
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+
+.summary::marker,
+.summary::-webkit-details-marker {
+  display: none;
+}
+
+
+
+/**
+  * marker animation
+  * for expanded and closed state
+  */
+.summary-marker {
+  display: inline-flex;
+  color: var(--marker-icon-color);
+  transition: var(--transition-duration);
+  font-size: var(--marker-icon-size);
+  line-height: inherit;
+  margin-bottom: 0;
+  text-align: center;
+  justify-content: center;
+  width: 1em;
+  transform: var(--marker-translate) var(--marker-scale) var(--marker-rotation);
+  transform-origin: center;
+  transform-box: fill-box;
+  flex: 0 0 1em;
+  font-weight: var(--marker-font-weight);
+}
+
+
+.summary:has(.summary-marker-round) {
+  --summary-gap: 0.3em;
+}
+
+
+/** define marker icon/symbol: chevron by default **/
+.summary-marker:before {
+  content: var(--marker-icon);
+  display: inline-block;
+}
+
+/** expanded animation **/
+.summary-marker-expanded {
+  --marker-rotation: rotate(90deg);
+}
+
+
+/** Style: plus/minus style **/
+.summary-marker-plus {
+  --marker-font-weight: 700;
+}
+
+.summary-marker-plus.summary-marker-expanded {
+  --marker-rotation: rotate(180deg);
+}
+
+.summary-marker-plus::before {
+  content: '+';
+}
+
+.summary-marker-expanded.summary-marker-plus::before {
+  /* minus sign */
+  content: '\2212';
+}
+
+/** Style: custom icon: hide pseudo if svg icon is specified **/
+
+.summary-marker-icon {
+  --marker-translate: translate(0, calc(0.5lh - 0.5em));
+}
+
+.summary-marker-icon * {
+  width: 100%;
+  height: auto;
+}
+
+
+
+
+/*  hide pseudo elements when custom icons are defined */
+.summary-marker-icon::before {
+  display: none;
+}
+
+/** round marker style **/
+
+.summary-marker-round {
+  --marker-translate: translate(0, calc(0.5lh - 0.5em));
+  background-color: currentcolor;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  width: 1em;
+  height: 1em;
+  padding: var(--marker-rounded-padding);
+}
+
+.summary-marker.summary-marker-round.summary-marker-right {
+  --marker-translate: translate(calc(var(--marker-rounded-padding) * -1), calc(0.5lh - 0.5em));
+}
+
+
+.summary-marker-icon-inner,
+.summary-marker-round::before,
+.summary-marker-round * {
+  color: #fff
+}
+
+
+/** right alignment: 
+  * flip marker via scale() 
+  */
+.summary-marker-right {
+  --marker-scale: scale(-1, 1);
+  order: 1;
+  margin-left: auto;
+}
+
+
+
+/** summary styles plus **/
+
+.details-plus{
+  details summary {
+    list-style-type: none;
+    padding-left: 0.5em;
+  }
+  
+  
+  summary::marker,
+  summary::-webkit-details-marker {
+    display: none;
+  }
+  
+  
+  summary:before {
+    display: inline-block;
+    ;
+    content: '+';
+    position: relative;
+    left: -0.5em;
+    transition: 0.3s transform;
+  }
+  
+  details[open] summary:before {
+    content: '\2212';
+    transform: rotate(180deg) translateY(-0em);
+  }
+}

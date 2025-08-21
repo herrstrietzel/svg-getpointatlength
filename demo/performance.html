@@ -113,7 +113,7 @@
                         native pointAtlength()</label></li>
                 <li class="white"><label><input class="inputShowResults" id="showLookup" type="checkbox" checked>white:
                         pathlengthLookup </label></li>
-                <li class="purple"><label><input class="inputShowResults" id="showProperties" type="checkbox">purple:
+                <li class="purple"><label><input class="inputShowResults" id="showProperties" type="checkbox" checked>purple:
                         svg-path-properties</label></li>
                 <li class="orange"><label><input class="inputShowResults" id="showCanvas" type="checkbox">orange:
                         path2D-inspection</label></li>
@@ -159,15 +159,25 @@
 
 
     <script src="https://cdn.jsdelivr.net/gh/Kaiido/path2D-inspection@master/build/path2D-inspection.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/svg-path-properties@latest/dist/svg-path-properties.min.js"></script>
-    <script src="path_samples.js"></script>
 
+
+    
+    <!-- 
+            <script src="https://cdn.jsdelivr.net/npm/svg-getpointatlength@latest/getPointAtLengthLookup.js"></script>
+
+    -->
+    <script src="path_samples.js"></script>
     <script src="../dist/svg-getpointatlength.js"></script>
 
 
 
+    <script type="module">
 
-    <script>
+
+
+        import { svgPathProperties } from 'https://cdn.jsdelivr.net/npm/svg-path-properties@2.0.0/+esm';
+
+
         // init
         let path = document.querySelector("path");
         let svg = path.closest("svg");
@@ -190,7 +200,7 @@
 
         let firstInd = 16
         firstInd = 7
-        firstInd = 1
+        firstInd = 0
         let first = inputExample.options[firstInd];
         exactLength = samples[firstInd].res ? samples[firstInd].res : 0;
 
@@ -245,25 +255,8 @@
         function updateSVG() {
             let d = svgInput.value;
 
-            d = normalizePathInput(d, true);
-            //console.log('d', d, );
+            d = stringifyPathData(normalizePathInput(d));
             //console.log('svgInput.value',svgInput.value);
-
-
-            /*
-            let type = Array.isArray(d) ? 'array' : typeof d;
-
-            // if string is SVG - take first geometry element
-            if (type === 'string' && d.startsWith('<svg')) {
-                let svg = new DOMParser().parseFromString(d, 'text/html').querySelector('svg');
-                let allowed = ['path', 'polygon', 'polyline', 'line', 'rect', 'circle', 'ellipse'];
-                let children = [...svg.children].filter(node => { return allowed.includes(node.nodeName.toLowerCase()) })
-                d = children.length ? children[0] : null;
-                if (d) type = 'element'
-            }
-
-            d = type === 'element' ? getPathDataFromEl(d).map( com=>{return `${com.type} ${com.values.join(' ')}`}) : parsePathDataNormalized(d)
-            */
 
             //console.log('example:', d);
             path.setAttribute("d", d);
@@ -274,7 +267,6 @@
             let w = vB.width || 100
             let h = vB.height || 100
             svg.setAttribute('viewBox', [vB.x, vB.y, w, h].join(' '))
-
 
 
 
@@ -346,12 +338,18 @@
             t0 = performance.now();
             let ptsL = [];
             for (let i = 0; i < vertices; i++) {
-                let pt = pathLengthLookup.getPointAtLength((totalLengthL / vertices) * i);
+                let step = (totalLengthL / vertices) * i
+                let pt = pathLengthLookup.getPointAtLength(step);
+                //console.log('step', step, 'totalLengthL', totalLengthL, 'pt', pt);
                 ptsL.push(pt);
             }
+
+            //console.log('ptsL',ptsL  );
             t1 = performance.now();
             t2 = t1 - t0;
             timings.lookup.time.push(t2);
+
+            console.log(pathLengthLookup);
 
             if (exactLength) {
                 timings.lookup.exact = exactLength;
@@ -363,8 +361,12 @@
              */
             t0 = performance.now();
             let ptsP = [];
+
+
             try {
-                let properties = new svgPathProperties.svgPathProperties(d);
+                let properties = new svgPathProperties(d);
+                //console.log('properties', properties);
+
                 let totalLengthProps = properties.getTotalLength();
                 t1 = performance.now();
                 t2 = t1 - t0;

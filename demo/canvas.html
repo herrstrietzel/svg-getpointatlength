@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Untitled</title>
+
+  <style>
+    svg {
+      outline: 1px solid #ccc
+    }
+  </style>
+
+</head>
+
+<body>
+
+
+
+  <!-- partial:index.partial.html -->
+  <canvas id="canvas" width="500" height="300" style="border:1px solid #ccc"></canvas>
+
+  <svg id="svg" width="500" viewBox="0 0 500 300">
+
+    <path id="path" d="" fill="none" stroke="red" stroke-width="1%" />
+  </svg>
+
+  <!-- 
+      <script src="../dist/svg-getpointatlength.js"></script>
+
+    <script src="canvas2svg.js"></script>
+  -->
+
+
+  <script>
+
+    function getDistance(p1, p2) {
+
+      // check horizontal or vertical
+      if (p1.y === p2.y) {
+        return Math.abs(p2.x - p1.x)
+      }
+      if (p1.x === p2.x) {
+        return Math.abs(p2.y - p1.y)
+      }
+
+      return Math.sqrt(
+        (p2.x - p1.x) ** 2 + (p2.y - p1.y) ** 2
+      );
+    }
+
+    function interpolate(p1, p2, t, getTangent = false) {
+
+      let pt = {
+        x: (p2.x - p1.x) * t + p1.x,
+        y: (p2.y - p1.y) * t + p1.y,
+      };
+
+      if (getTangent) {
+        pt.angle = getAngle(p1, p2)
+
+        // normalize negative angles
+        if (pt.angle < 0) pt.angle += Math.PI * 2
+      }
+
+      return pt
+    }
+
+    function getAngle(p1, p2, normalize = false) {
+      //console.log('getAngle', p1, p2);
+      let angle = Math.atan2(p2.y - p1.y, p2.x - p1.x);
+      // normalize negative angles
+      if (normalize && angle < 0) angle += Math.PI * 2
+      return angle
+    }
+
+
+    function normalizeAngle(angle) {
+    let PI2 = Math.PI * 2;
+    // Normalize to 0-2π range
+    angle = angle % PI2;
+    return angle < 0 ? angle + PI2 : angle;
+}
+
+    function renderPoint(
+      svg,
+      coords,
+      fill = "red",
+      r = "1%",
+      opacity = "1",
+      title = '',
+      render = true,
+      id = "",
+      className = ""
+    ) {
+      if (Array.isArray(coords)) {
+        coords = {
+          x: coords[0],
+          y: coords[1]
+        };
+      }
+      let marker = `<circle class="${className}" opacity="${opacity}" id="${id}" cx="${coords.x}" cy="${coords.y}" r="${r}" fill="${fill}">
+         <title>${title}</title></circle>`;
+
+      if (render) {
+        svg.insertAdjacentHTML("beforeend", marker);
+      } else {
+        return marker;
+      }
+    }
+
+
+  </script>
+
+
+  <script type="module">
+
+    import {getPathLookup} from '../dist/svg-getpointatlength.esm.min.js';
+
+
+    let d_all = ''
+
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+
+
+
+    // arcTo demo
+    //let pathString = new Path2D_svg('M 50 200 c 100 -150 200 150 300 -100');
+
+    let path_arcto = new Path2D_svg('M 50 200 c 100 -150 200 150 300 -100');
+    path_arcto.moveTo(p0.x, p0.y);
+    path_arcto.arcTo(cp1.x, cp1.y, cp2.x, cp2.y, r); 
+    path_arcto.lineTo(cp2.x, cp2.y); 
+
+
+    let p0 = { x: 0, y: 150 }
+    let cp1 = { x: 200, y: 150 }
+    let cp2 = { x: 100, y: 300 }
+    let r = 50
+
+    //renderPoint(svg, cp1, 'magenta')
+    //renderPoint(svg, cp2, 'cyan')
+
+
+    path_arcto.moveTo(p0.x, p0.y);
+    path_arcto.arcTo(cp1.x, cp1.y, cp2.x, cp2.y, r); 
+    path_arcto.lineTo(cp2.x, cp2.y); 
+    
+    ctx.strokeStyle = "purple";
+    ctx.lineWidth = 2;
+    ctx.stroke(path_arcto);
+
+    //let pathData_arcto = path_arcto.getPathData();
+    //let d_arcto = stringifyPathData(pathData_arcto)
+    let arcto_lookup = path_arcto.getPathLookup();
+    console.log(arcto_lookup);
+    let d_arcto = path_arcto.getPathDataString();
+    d_all +=d_arcto;
+
+    path.setAttribute('d',  d_all);
+
+    /*
+    // d
+    let pathString = new Path2D_svg('M 50 200 c 100 -150 200 150 300 -100');
+    ctx.strokeStyle = "orange";
+    ctx.lineWidth = 2;
+    ctx.stroke(pathString);
+    
+    //let pathData_string = (pathString.getPathData())
+    let d_pathData_string = pathString.getPathDataString()
+
+    d_all +=d_pathData_string;
+    //console.log('pathData_string', pathData_string);
+
+
+    path.setAttribute('d',  d_all);
+    */
+
+
+    /*
+    */
+
+    /*
+    // Cubic Bézier curve
+    let bezier = new Path2D_svg();
+    bezier.moveTo(20, 250);
+    bezier.bezierCurveTo(120, 100, 220, 400, 320, 150);
+    ctx.strokeStyle = "blue";
+    ctx.lineWidth = 2;
+    ctx.stroke(bezier);
+    
+    let pathdata_bezier = bezier.getPathData();
+    let d_bezier = stringifyPathData(pathdata_bezier)
+    path.setAttribute('d', d_bezier)
+    console.log('pathdata_bezier', pathdata_bezier, pathdata_bezier);
+    */
+
+
+    //console.log("Bezier commands:", bezier, bezier.getCommands());
+
+
+
+
+
+    /*
+    // Circle
+    let circle = new Path2D_svg();
+    circle.arc(100, 100, 40, 0, Math.PI * 2);
+    ctx.strokeStyle = "red";
+    ctx.stroke(circle);
+    let pathDataCircle = circle.getPathData();
+    
+    console.log("Circle commands:", pathDataCircle );
+    
+    // Ellipse
+    let ellipse = new Path2D_svg();
+    let xAxisRotation = -45 *180 /Math.PI
+    let startAngle = Math.PI * 0.25;
+    let endAngle = Math.PI * 0.95;
+    ellipse.ellipse(250, 100, 60, 30, xAxisRotation,  startAngle, endAngle);
+    ctx.strokeStyle = "green";
+    ctx.stroke(ellipse);
+    
+    let pathData_ellipse = ellipse.getPathData();
+    
+    console.log("Ellipse commands:", pathData_ellipse);
+    
+    // Rectangle
+    let rect = new Path2D_svg();
+    rect.rect(350, 50, 100, 80);
+    ctx.strokeStyle = "purple";
+    ctx.stroke(rect);
+    let pathData_rect = rect.getPathData();
+    
+    console.log("Rect commands:", pathData_rect);
+    
+    
+    */
+
+  </script>
+
+
+</body>
+
+</html>

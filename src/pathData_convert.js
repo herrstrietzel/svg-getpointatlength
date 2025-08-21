@@ -466,7 +466,7 @@ export function pathDataQuadraticToCubic(pathData) {
 /**
  * convert quadratic commands to cubic
  */
-export function quadratic2Cubic(p0, com) {
+export function quadratic2Cubic(p0, values) {
     if (Array.isArray(p0)) {
         p0 = {
             x: p0[0],
@@ -474,14 +474,14 @@ export function quadratic2Cubic(p0, com) {
         }
     }
     let cp1 = {
-        x: p0.x + 2 / 3 * (com[0] - p0.x),
-        y: p0.y + 2 / 3 * (com[1] - p0.y)
+        x: p0.x + 2 / 3 * (values[0] - p0.x),
+        y: p0.y + 2 / 3 * (values[1] - p0.y)
     }
     let cp2 = {
-        x: com[2] + 2 / 3 * (com[0] - com[2]),
-        y: com[3] + 2 / 3 * (com[1] - com[3])
+        x: values[2] + 2 / 3 * (values[0] - values[2]),
+        y: values[3] + 2 / 3 * (values[1] - values[3])
     }
-    return ({ type: "C", values: [cp1.x, cp1.y, cp2.x, cp2.y, com[2], com[3]] });
+    return ({ type: "C", values: [cp1.x, cp1.y, cp2.x, cp2.y, values[2], values[3]] });
 }
 
 

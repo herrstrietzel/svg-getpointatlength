@@ -1,11 +1,7 @@
 {
   "name": "svg-getpointatlength",
-  "version": "1.3.2",
+  "version": "1.9.9",
   "description": "alternative to native pointAtLength() and getTotalLength() method",
-  "main": "getPointAtLengthLookup.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/herrstrietzel/svg-getpointatlength.git"
@@ -15,6 +11,7 @@
     "pathlength",
     "point-at-length",
     "segment-at-length",
+    "angle-at-length",
     "path",
     "pathdata"
   ],
@@ -23,6 +20,30 @@
   "bugs": {
     "url": "https://github.com/herrstrietzel/svg-getpointatlength/issues"
   },
-  "homepage": "https://github.com/herrstrietzel/svg-getpointatlength#readme"
+  "homepage": "https://github.com/herrstrietzel/svg-getpointatlength#readme",
+  "main": "./dist/svg-getpointatlength.node.js",
+  "module": "./dist/svg-getpointatlength.esm.js",
+  "browser": "./dist/svg-getpointatlength.js",
+  "exports": {
+    ".": {
+      "import": "./dist/svg-getpointatlength.esm.js",
+      "require": "./dist/svg-getpointatlength.node.js"
+    },
+    "./dist/svg-getpointatlength.esm.js": "./dist/svg-getpointatlength.esm.js",
+    "./dist/svg-getpointatlength.js": "./dist/svg-getpointatlength.js",
+    "./dist/svg-getpointatlength.min.js": "./dist/svg-getpointatlength.min.js"
+  },
+  "type": "module",
+  "scripts": {
+    "build": "rollup -c",
+    "watch": "rollup -c --watch",
+    "test": "node test.js"
+  },
+  "devDependencies": {
+    "@rollup/plugin-terser": "^0.4.4",
+    "rollup": "^3.29.5"
+  },
+  "dependencies": {
+    "terser": "^5.39.0"
+  }
 }
-

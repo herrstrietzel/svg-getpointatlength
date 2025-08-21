@@ -1,0 +1,142 @@
+.grd-main2 {
+    display: grid;
+    grid-template-columns: clamp(min-content, 1fr, 1fr) 2fr;
+    grid-template-columns: 17.4em 17.25em 2fr;
+    grid-template-areas:
+        "sidebar sidebar2 main"
+        "sidebar sidebar2 main";
+    row-gap: 0em;
+    column-gap: 0;
+    transition: var(--transition, 0.3s);
+}
+
+.grid-area-sidebar {
+    grid-area: sidebar;
+    /* width:20em; */
+}
+
+.grid-area-sidebar2 {
+    grid-area: sidebar2;
+    /* width:20em; */
+}
+
+.grid-area-main {
+    grid-area: main;
+    /* width:50vw; */
+}
+
+#path {
+    stroke: var(--color-focus);
+}
+
+body {}
+
+
+
+* {
+    box-sizing: border-box;
+}
+
+
+.preview {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+}
+
+
+.preview svg {
+    /* height: 100%; */
+    display: block;
+    overflow: visible;
+    max-height: 90vh;
+    max-width: 90%;
+    width: auto;
+}
+
+.pointCount-wrp {
+    position: absolute;
+    bottom: 1em;
+    right: 1em;
+    text-align: right;
+}
+
+
+.sidebar-wrp {}
+
+
+.summary {
+    font-weight: 700;
+    font-size: 1.3em;
+}
+
+:root {
+    --color-stroke: #ccc;
+}
+
+/*
+.svgPreview * {
+    stroke: var(--color-stroke);
+    stroke-width: 1%;
+}
+
+.svgPreview circle {
+    stroke: none!important
+}
+*/
+
+
+.showMarkers * {
+    marker-start: url(#markerStart);
+    marker-mid: url(#markerRound);
+    marker-end: url(#markerRound);
+    stroke: #ccc;
+    stroke-width: inherit;
+}
+
+
+.showFill path,
+.showFill polygon,
+.showFill polyline {
+    fill: #ccc;
+    stroke: transparent;
+}
+
+
+.svgMarker {
+    color: var(--color-focus);
+}
+
+
+.input-group-label {
+    font-weight: 700;
+    margin-bottom: 0.5em;
+}
+
+
+.preview {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    height: 100%;
+    padding-top: 10vmin
+}
+
+
+.bboxRect,
+.bboxRectSegment{
+    display:none;
+}
+
+.showBB .bboxRect{
+    display:block;
+}
+
+.showBBSeg .bboxRectSegment{
+    display:block;
+}
+
+.p-report p{
+    margin-bottom:0.5rem
+    }

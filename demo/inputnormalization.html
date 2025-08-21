@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Input normalisation</title>
+
+    <link rel="stylesheet" href="styles.css">
+
+    <style>
+        .grd {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 2em;
+            height: 95vh;
+        }
+    </style>
+
+    <script src="https://cdn.jsdelivr.net/npm/path-data-polyfill@1.0.10/path-data-polyfill.min.js"></script>
+
+
+    <script>
+
+        function renderPoint(
+            svg,
+            coords,
+            fill = "red",
+            r = "1%",
+            opacity = "1",
+            title = '',
+            render = true,
+            id = "",
+            className = ""
+        ) {
+            if (Array.isArray(coords)) {
+                coords = {
+                    x: coords[0],
+                    y: coords[1]
+                };
+            }
+            let marker = `<circle class="${className}" opacity="${opacity}" id="${id}" cx="${coords.x}" cy="${coords.y}" r="${r}" fill="${fill}">
+  <title>${title}</title></circle>`;
+
+            if (render) {
+                svg.insertAdjacentHTML("beforeend", marker);
+            } else {
+                return marker;
+            }
+        }
+
+    </script>
+
+    <!-- 
+    <script src="https://cdn.jsdelivr.net/npm/svg-getpointatlength@latest/getPointAtLengthLookup.js"></script>
+        
+-->
+
+    <script src="../dist/svg-getpointatlength.js"></script>
+
+
+
+
+
+</head>
+
+<body>
+
+
+    <div class="grd">
+
+        <div class="col">
+            <h3>Parse SVG</h3>
+            <svg id="svg" viewBox="0 0 100 100">
+                <path id="path" class="previewPath" d="
+        m 50,0 .00001.0001.001 10e-10 Q 36.4 0 24.8 6.8t-18 18  t-6.8 25.2 C 0 63.8 5.6 76.3 14.65 85.35 s 21.55 14.65 35.35 14.65 a 50 25-45 0115.8-34.3 50 25 -45 0134.2 -25.7h -20-.5 v -12.5-12.5 H 75 50 V 0 z M 40 60 h-20 V 20h 18 .5.5.5.5z   m-5-35 c0 10 0 15 0 30 q-5 0 -10 0v-30zh-10 v20 h 5
+       " />
+            </svg>
+        </div>
+
+        <div class="col">
+            <h3>Parse Shape</h3>
+            <svg viewBox="0 0 200 100" xmlns="http://www.w3.org/2000/svg">
+                <rect id="rect" x="20%" y="2em" rx="5%" ry="1em" width="20%" height="3cm" fill="none" stroke="#000" />
+            </svg>
+        </div>
+
+        <div class="col">
+            <h3>Parse Polygon</h3>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="12.67 8.64 77.44 73.65">
+                <polygon id="poly" points="12.67 36.773 51.389 8.642 90.109 36.773 75.319 82.29 27.46 82.29" fill="none"
+                    stroke="#000" />
+            </svg>
+        </div>
+
+
+
+
+    </div>
+
+
+
+
+    <script type="module">
+
+        import { getPathLengthLookup, getPathDataFromEl  } from '../dist/svg-getpointatlength.esm.js';
+
+        /**
+         * lookup from DOM path element
+         */
+        let pathDataNorm = getPathDataFromEl(path, true);
+        let lookupPath = getPathLengthLookup(path);
+        console.log('lookupPath', lookupPath);
+
+
+        /**
+         * lookup from SVG markup
+         */
+         //let pathDataNorm = getPathDataFromEl(path, true);
+        let lookupMarkup = getPathLengthLookup(svg.outerHTML);
+        console.log('lookupMarkup', lookupMarkup);
+
+        /**
+         * lookup from SVG parent element
+         */
+         let lookupParent = getPathLengthLookup(svg);
+        console.log('lookupParent', lookupParent);
+
+
+        /**
+         * shape rect
+         * lookup from SVG parent element
+         */
+         let lookupShape = getPathLengthLookup(rect);
+         let pathDataRect = getPathDataFromEl(rect, true)
+         console.log('pathDataRect', pathDataRect);
+         let lenRectN = rect.getTotalLength()
+        console.log('lookupShape', lookupShape, lenRectN);
+
+
+        /**
+         * shape rect
+         * lookup from SVG parent element
+         */
+         let lookupShape = getPathLengthLookup(rect);
+         let pathDataRect = getPathDataFromEl(rect, true)
+         console.log('pathDataRect', pathDataRect);
+         let lenRectN = rect.getTotalLength()
+        console.log('lookupShape', lookupShape, lenRectN);
+
+
+
+
+
+
+
+
+    </script>
+
+</body>
+
+</html>
