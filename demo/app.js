@@ -149,9 +149,8 @@ function update(settings) {
     let options = {
         keepCorners: true,
         keepLines:true,
-        threshold: 1,
         vertices: 24,
-        decimals: 9,
+        decimals: 3,
     }
 
     /*

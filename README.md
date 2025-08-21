@@ -29,6 +29,7 @@ This way you can efficiently calculate hundreds of points on a path without sacr
 
 * [Usage](#usage)
   + [Browser](#browser)
+    - [Minimal »lite« version](#minimal-lite-version)
     - [Length only](#length-only)
   + [ES module](#es-module)
   + [Node](#node)
@@ -36,12 +37,13 @@ This way you can efficiently calculate hundreds of points on a path without sacr
 * [Canvas helper: Path2D_svg()](#canvas-helper-path2dsvg)
 * [Methods and options](#methods-and-options)
   + [Options: get tangent angles or segments at point](#options-get-tangent-angles-or-segments-at-point)
+    - [Shortcuts/aliases](#shortcuts-aliases)
   + [Get segments or split paths at length](#get-segments-or-split-paths-at-length)
     - [Get segment at length](#get-segment-at-length)
 * [Get bounding box](#get-bounding-box)
 * [Get Area](#get-area)
+* [Get polygon](#get-polygon)
 * [Split paths at length](#split-paths-at-length)
-* [Minimal »lite« version](#minimal-lite-version)
   + [paths and shapes as input argument (New in version 1.3.0)](#paths-and-shapes-as-input-argument-new-in-version-130)
     - [Get path data from elements/shapes](#get-path-data-from-elements-shapes)
 * [Updates and Versions](#updates-and-versions)
@@ -56,7 +58,6 @@ This way you can efficiently calculate hundreds of points on a path without sacr
 * [Alternative libraries](#alternative-libraries)
 * [Credits](#credits)
 * [Related Repositories/projects](#related-repositories-projects)
-
 
 
 
@@ -222,6 +223,7 @@ console.log(pt)
 
 ## Canvas helper: `Path2D_svg()`
 Version 2 adds a custom class `Path2D_svg()` to retrieve lookup data from a `Path2D` object.  
+It's a similar approach as in [Kaiido's Path2D Inspection library](https://github.com/Kaiido/path2D-inspection?tab=readme-ov-file#whats-wrong-with-the-current-path2d-interface)
 
 ```
 const path = new Path2D_svg();
@@ -410,6 +412,33 @@ By default `getArea` parameter is enabled:
 `getSegmentAtLength(length = 0, getBBox = true, getArea=true, decimals=-1)`
 
 While the area calculations should be quite accurate – based on proper calculations for each curve/segment type – we **can't accurately calculate areas for self-intersecting paths.**
+
+## Get polygon
+You can also retrieve a polygon from a lookup via `lookup.getPolygon(options)`
+```
+let options = {
+    keepCorners: true,
+    keepLines:true,
+    vertices: 24,
+    decimals: 3,
+}
+
+let polyData = lookup.getPolygon(options)
+let {points, poly, d} = polyData;
+```
+
+`getPolygon()` returns an object containing these properties:  
+* `poly`: point object array
+* `points`: point string - as used for SVG `<polygon>` and `<polyline>`
+* `d`: SVG path data string - as used for SVG `<path>`
+
+| parameter | type | default | effect |
+| -- | -- | --| -- |
+| keepCorners | Boolean | true | retains segment start and end point – unlike brute force vertex calculation based on equal length intervals |
+| keepLines | Boolean | true | doesn't add unnecessary points for line to segments – reduces number of points |
+| vertices | number | 16 | target max number of vertices. Will be adjusted if keepCorners is active to distribute points across all segments |
+| decimals | number | 3 | rounds coordinates for more compact data output. Set `-1` for no rounding |
+
 
 
 ## Split paths at length
